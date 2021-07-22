@@ -36,10 +36,35 @@ Reflect.defineProperty(currency, 'getBalance', {
 	},
 });
 
+const embedTest = (channel, user) => {
+	const embed = new Discord.MessageEmbed()
+	.setColor('#000000')
+	.setTitle('Blackjack')
+	// .attachFiles(['./PNG/aces.png'])
+	.setDescription('KEK')
+	.setThumbnail('https://www.seekpng.com/png/full/819-8194226_blackjack-instant-game-logo-graphic-design.png')
+	.addFields(
+		{ name: 'Emberek: ', value: 'Lapok: ' },
+		{ name: user.username, value: `Minden is  ${user}`, inline: true },
+		{ name: 'Valaki0', value: 'Kevésbé minden is \nBusted!', inline: true },
+		{ name: 'Valaki1', value: 'Kevésbé minden is adaw sa\n`WON!`', inline: true },
+		{ name: 'Valaki2', value: 'Kevésbé minden is a sda a sd', inline: true },
+		{ name: 'Valaki3', value: 'Kevésbé minden is adwada sd sa', inline: true },
+		{ name: 'Valaki4', value: 'Kevésbé minden is adwada sd sa\n#1 Victory Royale!', inline: true },
+		)
+	// .setImage('attachment://aces.png')
+	.addField('\u200b', '\u200b');
+	// .setImage('https://media.giphy.com/media/26uf19Em2GHT2lkhW/giphy.gif');
+
+	channel.send(embed);
+};
+
 client.once('ready', async () => {
 	const storedBalances = await Users.findAll();
 	storedBalances.forEach(b => currency.set(b.user_id, b));
 	console.log('I\'m ready!' + ` Logged in as '${client.user.tag}'`);
+	// const channel = client.channels.cache.find(ch => ch.name === 'botcsanel');
+	// embedTest(channel, client.user);
 });
 
 client.on('message', message => {
@@ -84,11 +109,14 @@ client.on('message', message => {
 			message.reply(`you now have ${currency.getBalance(message.author.id)}`);
 		}
 		break;
-	case 'repeat':
-		// eslint-disable-next-line no-case-declarations
-		const string = args.join(' ');
-		message.channel.send(string);
+	case 'embed':
+		embedTest(message.channel, message.author);
 		break;
+	// case 'repeat':
+	// 	 // eslint-disable-next-line no-case-declarations
+	// 	 const string = args.join(' ');
+	// 	 message.channel.send(string);
+	// 	 break;
 	default:
 		message.channel.send(`${message.author} ilyen commandot nem ismerek!`);
 	}
