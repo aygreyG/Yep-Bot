@@ -1,0 +1,3 @@
+# BlackjackBot
+
+méé nincs readme? 😂
