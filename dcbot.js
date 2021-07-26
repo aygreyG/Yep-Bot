@@ -77,17 +77,18 @@ client.on('message', message => {
 	case 'ping':
 		message.channel.send(`Pong 🏓 ${message.author}`);
 		break;
-	case '':
-		message.channel.send('Huh 🤷🏼‍♂️?');
-		break;
+	// case '':
+	// 	message.channel.send('Huh 🤷🏼‍♂️?');
+	// 	break;
 	case 'bet':
 		break;
 	case 'b':
-		if (args[0] === 'start') {
+	case 'blackjack':
+		// if (args[0] === 'start') {
             // message.channel.send(`${message.author} started a blackjack round, type '-blackjack join' to join it`);
 			/* ide kell a fgv hivas talan */
 			blackjack.start(message, currency);
-		}
+		// }
 		break;
 	case 'balance':
 		message.reply(`you have ${currency.getBalance(message.author.id)}`);
@@ -109,16 +110,16 @@ client.on('message', message => {
 			message.reply(`you now have ${currency.getBalance(message.author.id)}`);
 		}
 		break;
-	case 'embed':
-		embedTest(message.channel, message.author);
-		break;
+	// case 'embed':
+	// 	embedTest(message.channel, message.author);
+	// 	break;
 	// case 'repeat':
 	// 	 // eslint-disable-next-line no-case-declarations
 	// 	 const string = args.join(' ');
 	// 	 message.channel.send(string);
 	// 	 break;
 	default:
-		message.channel.send(`${message.author} ilyen commandot nem ismerek!`);
+		// message.channel.send(`${message.author} ilyen commandot nem ismerek!`);
 	}
 });
 

@@ -1,14 +1,17 @@
 const { Cards } = require('./cards.json');
-const Discord = require('discord.js')
+const Discord = require('discord.js');
 /* 312db 6 deck
 4*13*6
 2 3 4 5 6 7 8 9 10 J Q K (10) A (1 v 11)
 */
+// all of the cards
 const CardNumber = 52;
+// max number of one card
 const MaxCard = 1;
-let Blackjack = false;
-const arr = new Array(CardNumber);
-let players = [];
+
+const servers = [];
+
+// Classes ----------------------------------------------------------------
 
 class Player {
     constructor(name, id) {
@@ -58,67 +61,126 @@ class Player {
         });
         return string;
     }
-}
-const dealer = new Player('Yep Bot (the dealer)', '863025630261411881');
 
-const tableEmbed = () => {
-    const embed = new Discord.MessageEmbed()
-    .setColor('#000000')
-    .setAuthor('Yep BlackJack')
-    .addField('\u200b', '\u200b')
-    .addField(`__${dealer.name}__`, dealer.done ? `**Cards:**  ${dealer.writeCards}\n\`${dealer.doneReason}\`` :
-        `**Cards:**  ${dealer.writeCards}\n**Value:**  \`${dealer.cardVal}\``)
-    // .setDescription(dealer.done ?
-    //     `__**${dealer.name}**__\n**Cards:**  ${dealer.writeCards}\n\`${dealer.doneReason}\``
-    //     : `__**${dealer.name}**__\n**Cards:**  ${dealer.writeCards}\n**Value:**  \`${dealer.cardVal}\``)
-	.setThumbnail('https://www.seekpng.com/png/full/819-8194226_blackjack-instant-game-logo-graphic-design.png');
-    
-    // ide a dealer Fieldje kellene majd 🙂
-    
-    for (const player of players) {
-        if (player.done && player != dealer) {
-            embed.addField(`__${player.name}__`, `*bet: ${player.bet}*` + '\n**Cards:**  ' + player.writeCards + `\n\`${player.doneReason}\``, true);
-        }
-        else if (player != dealer) {
-            embed.addField(`__${player.name}__`, `*bet: ${player.bet}*` + '\n**Cards:**  ' + player.writeCards + '\n**Value:**  ' + `\`${player.cardVal}\``, true);
-        }
+    get valueCheck() {
+        return this.calcValueCheck();
     }
-    
-    return embed;
-};
 
-const valueCheck = (player) => {
-    // 0 == bust
-    // 1 == ok
-    // 2 == blackjack
-    let val = 0;
-    player.card.forEach(card => {
-        val += Cards[card].value;
-    });
-    // console.log(val + ' a valuecheck1');
-    if (val == 21 && player.card.length == 2) {
-        return 2;
-    }
-    if (val <= 21) return 1;
-    if (val > 21 && (player.card.includes(49) || player.card.includes(50) 
-    || player.card.includes(51) || player.card.includes(48))) {
-        for (const card of player.card) {
-            if (Cards[card].value === 11) {
-                val -= 10;
-                if (val <= 21) {
-                    // console.log('eljut ide ' + val);
-                    return 1;
+    calcValueCheck() {
+        // 0 == bust
+        // 1 == ok
+        // 2 == blackjack
+        let val = 0;
+        this.card.forEach(card => {
+            val += Cards[card].value;
+        });
+        // console.log(val + ' a valuecheck1');
+        if (val == 21 && this.card.length == 2) {
+            return 2;
+        }
+        if (val <= 21) return 1;
+        if (val > 21 && (this.card.includes(49) || this.card.includes(50) 
+        || this.card.includes(51) || this.card.includes(48))) {
+            for (const card of this.card) {
+                if (Cards[card].value === 11) {
+                    val -= 10;
+                    if (val <= 21) {
+                        // console.log('eljut ide ' + val);
+                        return 1;
+                    }
                 }
             }
         }
+        // console.log(val + ' a valuecheck2');
+        return 0;
     }
-    // console.log(val + ' a valuecheck2');
-    return 0;
-};
+}
 
-const checkPlayer = async (channel, player, currency) => {
+class BlackjackGame {
+    constructor(guildid) {
+        this.guildid = guildid;
+        this.players = [];
+        this.arr = new Array(CardNumber);
+        this.arr.fill(MaxCard);
+        this.dealer = new Player('Yep Bot (the dealer)', '863025630261411881');
+    }
+
+    get tableEmbed() {
+        return this.calcTableEmbed();
+    }
+
+    calcTableEmbed() {
+        const embed = new Discord.MessageEmbed()
+        .setColor('#000000')
+        .setAuthor('Yep BlackJack')
+        .addField('\u200b', '\u200b')
+        .addField(`__${this.dealer.name}__`, this.dealer.done ? `**Cards:**  ${this.dealer.writeCards}\n\`${this.dealer.doneReason}\`` :
+            `**Cards:**  ${this.dealer.writeCards}\n**Value:**  \`${this.dealer.cardVal}\``)
+        // .setDescription(dealer.done ?
+        //     `__**${dealer.name}**__\n**Cards:**  ${dealer.writeCards}\n\`${dealer.doneReason}\``
+        //     : `__**${dealer.name}**__\n**Cards:**  ${dealer.writeCards}\n**Value:**  \`${dealer.cardVal}\``)
+        .setThumbnail('https://www.seekpng.com/png/full/819-8194226_blackjack-instant-game-logo-graphic-design.png');
+        
+        // ide a dealer Fieldje kellene majd 🙂
+        
+        for (const player of this.players) {
+            if (player.done && player != this.dealer) {
+                embed.addField(`__${player.name}__`, `*bet: ${player.bet}*` + '\n**Cards:**  ' + player.writeCards + `\n\`${player.doneReason}\``, true);
+            }
+            else if (player != this.dealer) {
+                embed.addField(`__${player.name}__`, `*bet: ${player.bet}*` + '\n**Cards:**  ' + player.writeCards + '\n**Value:**  ' + `\`${player.cardVal}\``, true);
+            }
+        }
+
+        return embed;
+    }
+
+    get dealerGet() {
+        return this.calcDealerGet();
+    }
+
+    calcDealerGet() {
+        while (this.dealer.valueCheck === 1) {
+            let dealerValue = 0;
+            this.dealer.card.forEach(card => {
+                dealerValue += Cards[card].value;
+            });
+    
+            if (dealerValue > 16 && dealerValue <= 21) {
+                // console.log(dealerValue + ' returned');
+                return;
+            }
+            else if(dealerValue <= 16) {
+                giveCard(this, this.dealer, 1);
+                // console.log(dealerValue + ' gets a card');
+            }
+            else if (dealerValue > 21 && (this.dealer.card.includes(49) || this.dealer.card.includes(50) 
+            || this.dealer.card.includes(51) || this.dealer.card.includes(48))) {
+                this.dealer.card.forEach(card => {
+                    if (Cards[card].value == 11) {
+                        dealerValue -= 10;
+                        if (dealerValue < 21) {
+                            if (dealerValue > 16) {
+                                // console.log(dealerValue + ' returned2');
+                                return;
+                            }
+                            else {
+                                // console.log(dealerValue + ' gets a card2');
+                                giveCard(this, this.dealer, 1);
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    }
+}
+
+// Classes end ------------------------------------------------------------
+
+const checkPlayer = async (b, channel, player, currency) => {
     return new Promise((resolve, reject) => {
-            switch(valueCheck(player)) {
+            switch(player.valueCheck) {
             case 0:
                 console.log(`${player.name} busted and lost: ${player.bet}`);
                 player.done = true;
@@ -129,7 +191,7 @@ const checkPlayer = async (channel, player, currency) => {
                 break;
             case 1:
                 console.log(`${player.name}: hit or stand`);
-                channel.send(tableEmbed());
+                channel.send(b.tableEmbed);
                 resolve(hitorStand(channel, player, currency));
                 break;
             case 2:
@@ -144,7 +206,7 @@ const checkPlayer = async (channel, player, currency) => {
     });
 };
 
-const giveCard = (player, cNum) => {
+const giveCard = (b, player, cNum) => {
     let a = cNum;
     // if (player.id == '107398653542400000' && cNum == 1) {
     //     player.card.push(50);
@@ -165,15 +227,15 @@ const giveCard = (player, cNum) => {
         if (rand === 52) {
             continue;
         }
-        if (arr[rand] > 0) {
-            arr[rand]--;
+        if (b.arr[rand] > 0) {
+            b.arr[rand]--;
             a--;
             player.card.push(rand);
         }
     }
 };
 
-const hitorStand = async (channel, player, currency) => {
+const hitorStand = async (b, channel, player, currency) => {
     const hitembed = new Discord.MessageEmbed()
     .setColor('BLURPLE')
     .setDescription(`<@${player.id}> react with: ⬇️ if you want to stand, ⬆️ if you want to hit!`);
@@ -205,7 +267,7 @@ const hitorStand = async (channel, player, currency) => {
             .setDescription(`<@${player.id}> HITS!`);
 
             channel.send(hitEmbed);
-            giveCard(player, 1);
+            giveCard(b, player, 1);
 
             // channel.send(`<@${player.id}> your cards: ${player.writeCards} value: ${player.cardVal}`);
 
@@ -226,7 +288,7 @@ const hitorStand = async (channel, player, currency) => {
     });
 
     if (!ended) {
-        await checkPlayer(channel, player, currency);
+        await checkPlayer(b, channel, player, currency);
     }
 
     return true;
@@ -294,8 +356,8 @@ const hitorStand = async (channel, player, currency) => {
     // });
 };
 
-const hitStart = async (channel, player, currency) => {
-    const bool = await hitorStand(channel, player, currency); 
+const hitStart = async (b, channel, player, currency) => {
+    const bool = await hitorStand(b, channel, player, currency); 
     return new Promise((resolve) => {
         resolve(bool);
     });
@@ -307,42 +369,6 @@ const test = () => {
     Cards.forEach(element => {
         console.log(Cards.indexOf(element));
     });
-};
-
-const dealerGet = () => {
-    while (valueCheck(dealer) === 1) {
-        let dealerValue = 0;
-        dealer.card.forEach(card => {
-            dealerValue += Cards[card].value;
-        });
-
-        if (dealerValue > 16 && dealerValue <= 21) {
-            // console.log(dealerValue + ' returned');
-            return;
-        }
-        else if(dealerValue <= 16) {
-            giveCard(dealer, 1);
-            // console.log(dealerValue + ' gets a card');
-        }
-        else if (dealerValue > 21 && (dealer.card.includes(49) || dealer.card.includes(50) 
-        || dealer.card.includes(51) || dealer.card.includes(48))) {
-            dealer.card.forEach(card => {
-                if (Cards[card].value == 11) {
-                    dealerValue -= 10;
-                    if (dealerValue < 21) {
-                        if (dealerValue > 16) {
-                            // console.log(dealerValue + ' returned2');
-                            return;
-                        }
-                        else {
-                            // console.log(dealerValue + ' gets a card2');
-                            giveCard(dealer, 1);
-                        }
-                    }
-                }
-            });
-        }
-    }
 };
 
 const bet = async (player, channel, currency) => {
@@ -393,12 +419,16 @@ const bet = async (player, channel, currency) => {
 };
 
 const start = (message, currency) => {
-    if (Blackjack) {
-        message.reply('There is already a game!');
-        return;
+    for (const server of servers) {
+        if (server.guildid == message.guild.id) {
+            message.reply('There is already a game!');
+            return;
+        }
     }
 
-    Blackjack = true;
+    const b = new BlackjackGame(message.guild.id);
+    servers.push(b);
+
     // players.push(message.author.id);
 
     const startEmbed = new Discord.MessageEmbed()
@@ -408,14 +438,14 @@ const start = (message, currency) => {
     message.channel.send(startEmbed)
     .then(m => {
         m.react('✅');
-        const rfilter = (reaction, user) => !players.includes(user.id) && reaction.emoji.name === '✅' && !user.bot;
+        const rfilter = (reaction, user) => !b.players.includes(user.id) && reaction.emoji.name === '✅' && !user.bot;
         const rcollector = m.createReactionCollector(rfilter, { time: 5000 });
         
         // Teszt emberke: players.push(new Player('Valaki', 'Ez egy id'));
 
         rcollector.on('collect', (reaction, user) => {
             let has = false;
-            players.forEach(player => {
+            b.players.forEach(player => {
                 if (player.id == user.id) {
                     has = true;
                 }
@@ -426,7 +456,7 @@ const start = (message, currency) => {
                 .setDescription(`${user} joined!`);
 
                 console.log(`${user.username} joined!`);
-                players.push(new Player(user.username, user.id));
+                b.players.push(new Player(user.username, user.id));
 
                 m.channel.send(joinEmbed).then(async (joinmes) => {
                     await delay(1);
@@ -437,33 +467,42 @@ const start = (message, currency) => {
 
         rcollector.on('end', async collected => {
             console.log(`Joined: ${collected.size}`);
+            if (collected.size == 0) {
+                const notEnoughPlayersEmbed = new Discord.MessageEmbed()
+                .setColor('RED')
+                .setDescription('No players joined');
+
+                m.channel.send(notEnoughPlayersEmbed);
+
+                return;
+            }
+
             const mchannel = m.channel;
             // m.delete().catch(console.error);
 
-            for (const player of players) {
+            for (const player of b.players) {
                 console.log(player.name);
                 await bet(player, mchannel, currency);
             }
 
-            players = players.filter(player => !player.done);
+            b.players = b.players.filter(player => !player.done);
 
-            if (players.length > 0) {
-                deckReset();
-                players.push(dealer);
-                players.forEach(player => {
-                    giveCard(player, 2);
+            if (b.players.length > 0) {
+                b.players.push(b.dealer);
+                b.players.forEach(player => {
+                    giveCard(b, player, 2);
                 });
-                mchannel.send(tableEmbed());
+                mchannel.send(b.tableEmbed);
                 
-                if (valueCheck(dealer) === 2) {
-                    players.forEach(player => {
-                        if (valueCheck(player) === 2 && player != dealer) {
+                if (b.dealer.valueCheck === 2) {
+                    b.players.forEach(player => {
+                        if (player.valueCheck === 2 && player != b.dealer) {
                             player.done = true;
                             player.doneReason = 'Pushed!';
                             // mchannel.send(`<@${player.id}> pushed and got their money back.`);
                             currency.add(player.id, player.bet);
                         }
-                        else if (player != dealer) {
+                        else if (player != b.dealer) {
                             player.done = true;
                             player.doneReason = 'Lost!';
                             // mchannel.send(`<@${player.id}> lost their bet: ${player.bet}`);
@@ -473,13 +512,13 @@ const start = (message, currency) => {
                             player.doneReason = 'Got BlackJack!';
                         }
                     });
-                    mchannel.send(tableEmbed());
+                    mchannel.send(b.tableEmbed);
                 }
                 else {
-                    for (const player of players) {
+                    for (const player of b.players) {
                         // console.log(player.cardVal);
-                        if (player != dealer) {
-                            if (valueCheck(player) == 2) {
+                        if (player != b.dealer) {
+                            if (player.valueCheck == 2) {
                                 console.log(`${player.name} got a blackjack and won: ${Math.ceil(player.bet * 1.5)}`);
                                 currency.add(player.id, player.bet + Math.ceil(player.bet * 1.5));
                                 // mchannel.send(`<@${player.id}> got a blackjack and won: ${Math.ceil(player.bet * 1.5)}`);
@@ -487,25 +526,25 @@ const start = (message, currency) => {
                                 player.doneReason = 'BLACKJACK!';
                             }
                             else {
-                                const worked = await hitStart(mchannel, player, currency); // checkPlayer(mchannel, player);
+                                const worked = await hitStart(b, mchannel, player, currency); // checkPlayer(mchannel, player);
                                 // console.log(worked);
                             }
                         }
                     }
 
-                    mchannel.send(tableEmbed());
+                    mchannel.send(b.tableEmbed);
 
-                    const playersfiltered = players.filter(player => !player.done);
+                    const playersfiltered = b.players.filter(player => !player.done);
 
                     if (playersfiltered.length > 1) {
-                        dealerGet();
+                        b.dealerGet;
                         // mchannel.send(`Dealer's cards: ${dealer.writeCards} value: ${dealer.cardVal}`);
-                        if (dealer.cardVal > 21) {
+                        if (b.dealer.cardVal > 21) {
                             // mchannel.send('Dealer busted, everyone wins!!!');
-                            dealer.done = true;
-                            dealer.doneReason = 'BUSTED!';
-                            players.forEach(player => {
-                                if (player != dealer && !player.done) {
+                            b.dealer.done = true;
+                            b.dealer.doneReason = 'BUSTED!';
+                            b.players.forEach(player => {
+                                if (player != b.dealer && !player.done) {
                                     player.done = true;
                                     player.doneReason = 'WON';
                                     currency.add(player.id, player.bet * 2);
@@ -513,16 +552,16 @@ const start = (message, currency) => {
                             });
                         }
                         else {
-                            players.forEach(player => {
-                                if (player != dealer && !player.done) {
+                            b.players.forEach(player => {
+                                if (player != b.dealer && !player.done) {
                                     // mchannel.send(tableEmbed());
-                                    if (player.cardVal > dealer.cardVal) {
+                                    if (player.cardVal > b.dealer.cardVal) {
                                         player.done = true;
                                         player.doneReason = 'WON!';
                                         // mchannel.send(`<@${player.id}> won: ${player.bet}`);
                                         currency.add(player.id, player.bet * 2);
                                     }
-                                    else if (player.cardVal == dealer.cardVal) {
+                                    else if (player.cardVal == b.dealer.cardVal) {
                                         player.done = true;
                                         player.doneReason = 'PUSHED!';
                                         // mchannel.send(`<@${player.id}> pushed and got their money back. (${player.bet})`);
@@ -536,14 +575,12 @@ const start = (message, currency) => {
                                 }
                             });
                         }
-                        mchannel.send(tableEmbed());
+                        mchannel.send(b.tableEmbed);
                     }
                 }
             }
-            Blackjack = false;
-            players.length = 0;
-            dealer.card.length = 0;
         });
+        servers.splice(servers.indexOf(b), 1);
     // })
     // .then(m => {
     //     if (players.length > 0) {
@@ -599,8 +636,8 @@ const start = (message, currency) => {
 //     return nums;
 // };
 
-const deckReset = () => {
-    arr.fill(MaxCard);
-};
+// const deckReset = () => {
+//     arr.fill(MaxCard);
+// };
 
 module.exports = { test, start };
