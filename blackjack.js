@@ -1,9 +1,10 @@
 const { Cards } = require('./cards.json');
 const Discord = require('discord.js');
-/* 312db 6 deck
-4*13*6
+
+/* 312db 6 decknél
 2 3 4 5 6 7 8 9 10 J Q K (10) A (1 v 11)
 */
+
 // all of the cards
 const CardNumber = 52;
 // max number of one card
@@ -74,7 +75,6 @@ class Player {
         this.card.forEach(card => {
             val += Cards[card].value;
         });
-        // console.log(val + ' a valuecheck1');
         if (val == 21 && this.card.length == 2) {
             return 2;
         }
@@ -85,13 +85,11 @@ class Player {
                 if (Cards[card].value === 11) {
                     val -= 10;
                     if (val <= 21) {
-                        // console.log('eljut ide ' + val);
                         return 1;
                     }
                 }
             }
         }
-        // console.log(val + ' a valuecheck2');
         return 0;
     }
 }
@@ -114,21 +112,17 @@ class BlackjackGame {
         .setColor('#000000')
         .setAuthor('Yep BlackJack')
         .addField('\u200b', '\u200b')
-        .addField(`__${this.dealer.name}__`, this.dealer.done ? `**Cards:**  ${this.dealer.writeCards}\n\`${this.dealer.doneReason}\`` :
-            `**Cards:**  ${this.dealer.writeCards}\n**Value:**  \`${this.dealer.cardVal}\``)
-        // .setDescription(dealer.done ?
-        //     `__**${dealer.name}**__\n**Cards:**  ${dealer.writeCards}\n\`${dealer.doneReason}\``
-        //     : `__**${dealer.name}**__\n**Cards:**  ${dealer.writeCards}\n**Value:**  \`${dealer.cardVal}\``)
+        .addField(`__${this.dealer.name}__`, this.dealer.done ? (this.dealer.doneReason == '' ? `**Cards:**  ${this.dealer.writeCards}\n**Value:**  \`${this.dealer.cardVal}\`` 
+            : `**Cards:**  ${this.dealer.writeCards}\n**Value:**  \`${this.dealer.cardVal}\`\n\`${this.dealer.doneReason}\``) :
+            `**Cards:**  ${Cards[this.dealer.card[0]].name} & Something\n**Value:**  \`${Cards[this.dealer.card[0]].value}\``)
         .setThumbnail('https://www.seekpng.com/png/full/819-8194226_blackjack-instant-game-logo-graphic-design.png');
-        
-        // ide a dealer Fieldje kellene majd 🙂
         
         for (const player of this.players) {
             if (player.done && player != this.dealer) {
-                embed.addField(`__${player.name}__`, `*bet: ${player.bet}*` + '\n**Cards:**  ' + player.writeCards + `\n\`${player.doneReason}\``, true);
+                embed.addField('\u200b', `__<@${player.id}>__\n*bet: ${player.bet}*` + '\n**Cards:**  ' + player.writeCards + `\n\`${player.doneReason}\``, true);
             }
             else if (player != this.dealer) {
-                embed.addField(`__${player.name}__`, `*bet: ${player.bet}*` + '\n**Cards:**  ' + player.writeCards + '\n**Value:**  ' + `\`${player.cardVal}\``, true);
+                embed.addField('\u200b', `__<@${player.id}>__\n*bet: ${player.bet}*` + '\n**Cards:**  ' + player.writeCards + '\n**Value:**  ' + `\`${player.cardVal}\``, true);
             }
         }
 
@@ -185,14 +179,12 @@ const checkPlayer = async (b, channel, player, currency) => {
                 console.log(`${player.name} busted and lost: ${player.bet}`);
                 player.done = true;
                 player.doneReason = 'BUSTED!';
-                // channel.send(`<@${player.id}> busted and lost: ${player.bet}`);
-                // players.splice(players.indexOf(player), 1);
                 resolve(true);
                 break;
             case 1:
                 console.log(`${player.name}: hit or stand`);
                 channel.send(b.tableEmbed);
-                resolve(hitorStand(channel, player, currency));
+                resolve(hitorStand(b, channel, player, currency));
                 break;
             case 2:
                 console.log('Can\'t get here!');
@@ -208,20 +200,7 @@ const checkPlayer = async (b, channel, player, currency) => {
 
 const giveCard = (b, player, cNum) => {
     let a = cNum;
-    // if (player.id == '107398653542400000' && cNum == 1) {
-    //     player.card.push(50);
-    //     a = 0;
-    // }
-    // if (player.id == '107398653542400000' && cNum == 2) {
-    //     player.card.push(5);
-    //     player.card.push(34);
-    //     a = 0;
-    // }
-    // if (player.id == '863025630261411881' && cNum == 2) {
-    //     player.card.push(50);
-    //     player.card.push(0);
-    //     a = 0;
-    // }
+    
     while (a !== 0) {
         const rand = Math.floor(Math.random() * 52);
         if (rand === 52) {
@@ -269,10 +248,6 @@ const hitorStand = async (b, channel, player, currency) => {
             channel.send(hitEmbed);
             giveCard(b, player, 1);
 
-            // channel.send(`<@${player.id}> your cards: ${player.writeCards} value: ${player.cardVal}`);
-
-            // channel.send(tableEmbed());
-
             msg.delete().catch(console.error);
             ended = false;
         }
@@ -292,68 +267,6 @@ const hitorStand = async (b, channel, player, currency) => {
     }
 
     return true;
-    // channel.send(`<@${player.id}> react with: ⬇️ if you want to stand, ⬆️ if you want to hit!`)
-    // .then(message => {
-    //     message.react('⬇️')
-    //     .then(() => message.react('⬆️'))
-    //     .then(async () => {
-    //         const filter = (reaction, user) => {
-    //             return ((reaction.emoji.name === '⬇️' || reaction.emoji.name === '⬆️') 
-    //             && user.id == player.id && !user.bot);
-    //         };
-
-            /* message.awaitReactions(filter, { max: 4, time: 60000, errors: ['time'] })
-	        .then(collected => console.log(collected.size))
-	        .catch(collected => {
-	        	console.log(`After a minute, only ${collected.size} out of 4 reacted.`);
-	        }); */
-
-            // await message.awaitReactions(filter, { max: 1, time: 10000, errors: ['time'] })
-            // .then(async collected => {
-            //     if (collected.first().emoji.name === '⬇️') {
-            //         channel.send('You stand');
-            //         message.delete().catch(console.error);
-            //         return true;
-            //     }
-            //     if (collected.first().emoji.name === '⬆️') {
-            //         channel.send('You hit!');
-            //         giveCard(player, 1);
-            //         message.delete().catch(console.error);
-            //         return await checkPlayer(channel, player);
-            //     }
-            // }).catch(async () => {
-            //     console.log('ran out of time kek');
-            //     channel.send('You ran out of time so you stand!');
-            //     message.delete().catch(console.error);
-            //     return true;
-            // });
-
-            // const collector = message.createReactionCollector(filter, { max: 1, time: 10000 });
-
-            // collector.on('collect', reaction => {
-            //     if (reaction.emoji.name === '⬆️') {
-            //         giveCard(player, 1);
-            //         channel.send('You hit!');
-            //         return true;
-            //     }
-            //     if (reaction.emoji.name === '⬇️') {
-            //         channel.send('You stand');
-            //         return false;
-            //     }
-            // });
-
-            // collector.on('end', reason => {
-            //     if (reason === 'time') {
-            //         channel.send('Not reacted in time! So you stand!');
-            //         message.delete();
-            //         return false;
-            //     }
-            // });
-    //     });
-    // })
-    // .catch(error => {
-    //     console.log(error.message);
-    // });
 };
 
 const hitStart = async (b, channel, player, currency) => {
@@ -364,12 +277,6 @@ const hitStart = async (b, channel, player, currency) => {
 };
 
 const delay = (n) => new Promise(r => setTimeout(r, n * 1000));
-
-const test = () => {
-    Cards.forEach(element => {
-        console.log(Cards.indexOf(element));
-    });
-};
 
 const bet = async (player, channel, currency) => {
     const betEmbed = new Discord.MessageEmbed()
@@ -412,7 +319,6 @@ const bet = async (player, channel, currency) => {
                 player.doneReason = 'time';
             }
             ms.delete().catch(console.error);
-            // console.log('collected bet: ' + collected.size + ' ' + reason);
             resolve();
         });
     });
@@ -429,8 +335,6 @@ const start = (message, currency) => {
     const b = new BlackjackGame(message.guild.id);
     servers.push(b);
 
-    // players.push(message.author.id);
-
     const startEmbed = new Discord.MessageEmbed()
     .setColor('GREEN')
     .setDescription(`${message.author} started blackjack, join by clicking ✅ under the message, u have 5 secs!!!`);
@@ -440,8 +344,6 @@ const start = (message, currency) => {
         m.react('✅');
         const rfilter = (reaction, user) => !b.players.includes(user.id) && reaction.emoji.name === '✅' && !user.bot;
         const rcollector = m.createReactionCollector(rfilter, { time: 5000 });
-        
-        // Teszt emberke: players.push(new Player('Valaki', 'Ez egy id'));
 
         rcollector.on('collect', (reaction, user) => {
             let has = false;
@@ -478,7 +380,6 @@ const start = (message, currency) => {
             }
 
             const mchannel = m.channel;
-            // m.delete().catch(console.error);
 
             for (const player of b.players) {
                 console.log(player.name);
@@ -499,13 +400,11 @@ const start = (message, currency) => {
                         if (player.valueCheck === 2 && player != b.dealer) {
                             player.done = true;
                             player.doneReason = 'Pushed!';
-                            // mchannel.send(`<@${player.id}> pushed and got their money back.`);
                             currency.add(player.id, player.bet);
                         }
                         else if (player != b.dealer) {
                             player.done = true;
                             player.doneReason = 'Lost!';
-                            // mchannel.send(`<@${player.id}> lost their bet: ${player.bet}`);
                         }
                         else {
                             player.done = true;
@@ -516,18 +415,15 @@ const start = (message, currency) => {
                 }
                 else {
                     for (const player of b.players) {
-                        // console.log(player.cardVal);
                         if (player != b.dealer) {
                             if (player.valueCheck == 2) {
                                 console.log(`${player.name} got a blackjack and won: ${Math.ceil(player.bet * 1.5)}`);
                                 currency.add(player.id, player.bet + Math.ceil(player.bet * 1.5));
-                                // mchannel.send(`<@${player.id}> got a blackjack and won: ${Math.ceil(player.bet * 1.5)}`);
                                 player.done = true;
                                 player.doneReason = 'BLACKJACK!';
                             }
                             else {
-                                const worked = await hitStart(b, mchannel, player, currency); // checkPlayer(mchannel, player);
-                                // console.log(worked);
+                                const worked = await hitStart(b, mchannel, player, currency);
                             }
                         }
                     }
@@ -538,9 +434,7 @@ const start = (message, currency) => {
 
                     if (playersfiltered.length > 1) {
                         b.dealerGet;
-                        // mchannel.send(`Dealer's cards: ${dealer.writeCards} value: ${dealer.cardVal}`);
                         if (b.dealer.cardVal > 21) {
-                            // mchannel.send('Dealer busted, everyone wins!!!');
                             b.dealer.done = true;
                             b.dealer.doneReason = 'BUSTED!';
                             b.players.forEach(player => {
@@ -552,25 +446,23 @@ const start = (message, currency) => {
                             });
                         }
                         else {
+                            b.dealer.done = true;
+                            b.dealer.doneReason = '';
                             b.players.forEach(player => {
                                 if (player != b.dealer && !player.done) {
-                                    // mchannel.send(tableEmbed());
                                     if (player.cardVal > b.dealer.cardVal) {
                                         player.done = true;
                                         player.doneReason = 'WON!';
-                                        // mchannel.send(`<@${player.id}> won: ${player.bet}`);
                                         currency.add(player.id, player.bet * 2);
                                     }
                                     else if (player.cardVal == b.dealer.cardVal) {
                                         player.done = true;
                                         player.doneReason = 'PUSHED!';
-                                        // mchannel.send(`<@${player.id}> pushed and got their money back. (${player.bet})`);
                                         currency.add(player.id, player.bet);
                                     }
                                     else {
                                         player.done = true;
                                         player.doneReason = 'LOST';
-                                        // mchannel.send(`<@${player.id}> lost: ${player.bet}`);
                                     }
                                 }
                             });
@@ -581,63 +473,7 @@ const start = (message, currency) => {
             }
         });
         servers.splice(servers.indexOf(b), 1);
-    // })
-    // .then(m => {
-    //     if (players.length > 0) {
-    //         deal(mchannel, currency);
-    //     }
     });
-    // const filter = m => /* !players.includes(m.author.id) && */ m.content === '-b join' && !m.author.bot;
-    // const collector = message.channel.createMessageCollector(filter, { time: 15000 });
-    // // message.channel.send('-blackjack join');
-
-    // collector.on('collect', m => {
-    //     if (players.includes(m.author.id)) {
-    //         m.reply('you have already joined!');
-    //         return;
-    //     }
-    //     console.log(`joined: ${m.author}`);
-    //     players.push(m.author.id);
-    //     m.reply('you joined!');
-    // });
-
-    // collector.on('dispose', m => {
-    //     console.log('disposed');
-        
-    // });
-
-    // collector.on('end', collected => {
-    //     console.log(`Collected: ${collected.size}`);
-    // });
 };
 
-// const join = (message) => {
-//     if (players.includes(message.author.id)) {
-//         message.channel.send('You have already joined!');
-//     }
-//     else {
-//         players.push(message.author.id);
-//         message.reply('you joined!');
-//     }
-// };
-
-// const deal = (number) => {
-// 	const nums = new Array(number);
-//     let have = 0;
-//     while(have != number) {
-//         const rando = Math.floor(Math.random() * (CardNumber - 0.001));
-//         console.log(`${have} ${number} ${rando} ${arr[rando]}`);
-//         if (arr[rando] > 0) {
-//             nums[have] = rando;
-//             have++;
-//             arr[rando]--;
-//         }
-//     }
-//     return nums;
-// };
-
-// const deckReset = () => {
-//     arr.fill(MaxCard);
-// };
-
-module.exports = { test, start };
+module.exports = { start };

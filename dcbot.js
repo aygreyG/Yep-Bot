@@ -7,6 +7,11 @@ const { Users } = require('./dbObjects');
 const { Op } = require('sequelize');
 const currency = new Discord.Collection();
 
+// Help szövege:
+const helpEmbed = new Discord.MessageEmbed()
+	.setColor('#48C9B0')
+	.setDescription('Nothing here yet...');
+
 /* add metódus hozzáadása currencyhez */
 
 Reflect.defineProperty(currency, 'add', {
@@ -36,28 +41,28 @@ Reflect.defineProperty(currency, 'getBalance', {
 	},
 });
 
-const embedTest = (channel, user) => {
-	const embed = new Discord.MessageEmbed()
-	.setColor('#000000')
-	.setTitle('Blackjack')
-	// .attachFiles(['./PNG/aces.png'])
-	.setDescription('KEK')
-	.setThumbnail('https://www.seekpng.com/png/full/819-8194226_blackjack-instant-game-logo-graphic-design.png')
-	.addFields(
-		{ name: 'Emberek: ', value: 'Lapok: ' },
-		{ name: user.username, value: `Minden is  ${user}`, inline: true },
-		{ name: 'Valaki0', value: 'Kevésbé minden is \nBusted!', inline: true },
-		{ name: 'Valaki1', value: 'Kevésbé minden is adaw sa\n`WON!`', inline: true },
-		{ name: 'Valaki2', value: 'Kevésbé minden is a sda a sd', inline: true },
-		{ name: 'Valaki3', value: 'Kevésbé minden is adwada sd sa', inline: true },
-		{ name: 'Valaki4', value: 'Kevésbé minden is adwada sd sa\n#1 Victory Royale!', inline: true },
-		)
-	// .setImage('attachment://aces.png')
-	.addField('\u200b', '\u200b');
-	// .setImage('https://media.giphy.com/media/26uf19Em2GHT2lkhW/giphy.gif');
+// const embedTest = (channel, user) => {
+// 	const embed = new Discord.MessageEmbed()
+// 	.setColor('#000000')
+// 	.setTitle('Blackjack')
+// 	// .attachFiles(['./PNG/aces.png'])
+// 	.setDescription('KEK')
+// 	.setThumbnail('https://www.seekpng.com/png/full/819-8194226_blackjack-instant-game-logo-graphic-design.png')
+// 	.addFields(
+// 		{ name: 'Emberek: ', value: 'Lapok: ' },
+// 		{ name: user.username, value: `Minden is  ${user}`, inline: true },
+// 		{ name: 'Valaki0', value: 'Kevésbé minden is \nBusted!', inline: true },
+// 		{ name: 'Valaki1', value: 'Kevésbé minden is adaw sa\n`WON!`', inline: true },
+// 		{ name: 'Valaki2', value: 'Kevésbé minden is a sda a sd', inline: true },
+// 		{ name: 'Valaki3', value: 'Kevésbé minden is adwada sd sa', inline: true },
+// 		{ name: 'Valaki4', value: 'Kevésbé minden is adwada sd sa\n#1 Victory Royale!', inline: true },
+// 		)
+// 	// .setImage('attachment://aces.png')
+// 	.addField('\u200b', '\u200b');
+// 	// .setImage('https://media.giphy.com/media/26uf19Em2GHT2lkhW/giphy.gif');
 
-	channel.send(embed);
-};
+// 	channel.send(embed);
+// };
 
 client.once('ready', async () => {
 	const storedBalances = await Users.findAll();
@@ -77,18 +82,14 @@ client.on('message', message => {
 	case 'ping':
 		message.channel.send(`Pong 🏓 ${message.author}`);
 		break;
-	// case '':
-	// 	message.channel.send('Huh 🤷🏼‍♂️?');
-	// 	break;
+	case 'help':
+		message.channel.send(helpEmbed);
+		break;
 	case 'bet':
 		break;
 	case 'b':
 	case 'blackjack':
-		// if (args[0] === 'start') {
-            // message.channel.send(`${message.author} started a blackjack round, type '-blackjack join' to join it`);
-			/* ide kell a fgv hivas talan */
-			blackjack.start(message, currency);
-		// }
+		blackjack.start(message, currency);
 		break;
 	case 'balance':
 		message.reply(`you have ${currency.getBalance(message.author.id)}`);
@@ -110,16 +111,7 @@ client.on('message', message => {
 			message.reply(`you now have ${currency.getBalance(message.author.id)}`);
 		}
 		break;
-	// case 'embed':
-	// 	embedTest(message.channel, message.author);
-	// 	break;
-	// case 'repeat':
-	// 	 // eslint-disable-next-line no-case-declarations
-	// 	 const string = args.join(' ');
-	// 	 message.channel.send(string);
-	// 	 break;
 	default:
-		// message.channel.send(`${message.author} ilyen commandot nem ismerek!`);
 	}
 });
 
