@@ -27,6 +27,9 @@ class Player {
         return this.calcCardVal();
     }
     
+    /**
+     * @returns value of the player's cards
+     */
     calcCardVal() {
         let val = 0;
         this.card.forEach(card => {
@@ -50,6 +53,9 @@ class Player {
         return this.calcWriteCards();
     }
     
+    /**
+     * @returns a string representation of the player's cards
+     */
     calcWriteCards() {
         let string = '';
         this.card.forEach(card => {
@@ -67,10 +73,13 @@ class Player {
         return this.calcValueCheck();
     }
 
+    /**
+     * 0 == bust
+     * 1 == ok
+     * 2 == blackjack
+     * @returns a number from 0 to 2 depending on the cards' value
+     */
     calcValueCheck() {
-        // 0 == bust
-        // 1 == ok
-        // 2 == blackjack
         let val = 0;
         this.card.forEach(card => {
             val += Cards[card].value;
@@ -107,6 +116,10 @@ class BlackjackGame {
         return this.calcTableEmbed();
     }
 
+    /**
+     * 
+     * @returns a Discord embed object of the currency table
+     */
     calcTableEmbed() {
         const embed = new Discord.MessageEmbed()
         .setColor('#000000')
@@ -133,6 +146,10 @@ class BlackjackGame {
         return this.calcDealerGet();
     }
 
+    /**
+     * Gives the dealer cards
+     * @returns if the dealer busts or its cards' value reaches 17
+     */
     calcDealerGet() {
         while (this.dealer.valueCheck === 1) {
             let dealerValue = 0;

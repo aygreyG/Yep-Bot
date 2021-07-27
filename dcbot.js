@@ -14,6 +14,19 @@ const helpEmbed = new Discord.MessageEmbed()
 
 /* add metódus hozzáadása currencyhez */
 
+const leaderboardEmbed = (members) => {
+	const mm = members.map(member => member.id);
+	// console.log(mm);
+	return new Discord.MessageEmbed()
+	.setColor('ORANGE')
+	.setDescription(
+		currency.sort((a, b) => b.balance - a.balance)
+		.filter(user => client.users.cache.has(user.user_id) && mm.includes(user.user_id)/*&& message.guild.members.cache.has(user.user_id)*/ && user.user_id != '')
+		.first(15)
+		.map((user, position) => `#${position + 1} 👉 ${client.users.cache.get(user.user_id).username}: ${user.balance}`)
+		.join('\n'));
+};
+
 Reflect.defineProperty(currency, 'add', {
 	value: async function add(id, amount) {
 		const user = currency.get(id);
@@ -66,14 +79,19 @@ Reflect.defineProperty(currency, 'getBalance', {
 
 client.once('ready', async () => {
 	const storedBalances = await Users.findAll();
-	storedBalances.forEach(b => currency.set(b.user_id, b));
+	storedBalances.forEach(b => {
+		if (b.user_id != '' && b.user_id != 'Ez egy id' && b.user_id > 0) {
+			currency.set(b.user_id, b);
+			client.users.fetch(b.user_id);
+		}
+	});
 	console.log('I\'m ready!' + ` Logged in as '${client.user.tag}'`);
 	// const channel = client.channels.cache.find(ch => ch.name === 'botcsanel');
 	// embedTest(channel, client.user);
 });
 
 client.on('message', message => {
-	if (message.content.toLowerCase().includes('yep')) message.reply('COCK');
+	if (message.content.toLowerCase().includes('yep') && !message.author.bot) message.reply('COCK');
 	if (!message.content.startsWith(prefix) || message.author.bot) return;
 	const args = message.content.slice(prefix.length).trim().split(/ +/);
 	const command = args.shift().toLowerCase();
@@ -84,6 +102,12 @@ client.on('message', message => {
 		break;
 	case 'help':
 		message.channel.send(helpEmbed);
+		break;
+	case 'l':
+	case 'leaderboard':
+		message.guild.members.fetch().then(members => {
+			message.channel.send(leaderboardEmbed(members));
+		}).catch(console.error);
 		break;
 	case 'bet':
 		break;
