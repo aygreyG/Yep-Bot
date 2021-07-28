@@ -2,6 +2,7 @@ const Discord = require('discord.js');
 const client = new Discord.Client();
 const { prefix, token } = require('./config.json');
 const blackjack = require('./blackjack');
+const coinflip = require('./coinflip');
 
 const { Users } = require('./dbObjects');
 const { Op } = require('sequelize');
@@ -9,19 +10,25 @@ const currency = new Discord.Collection();
 
 // Help szövege:
 const helpEmbed = new Discord.MessageEmbed()
-	.setColor('#48C9B0')
-	.setDescription('Nothing here yet...');
+.setColor('#ADE9F2')
+.setDescription('__**Commands:**__')
+.addFields(
+	{ name: '-help', value: '❓ Lists all available commands.' },
+	{ name: '-b/-blackjack', value: '🃏 Starts a new blackjack game.' },
+	{ name: '-f/-flip <your bet> <heads/tails>', value: '🪙 Flips a coin.' },
+	{ name: '-balance/-balance <user tag>', value: '💰 Shows you your or the tagged user\'s balance.' },
+	{ name: '-l/-leaderboard', value: '📋 Shows you the top 15 wealthiest user on the server.' },
+	{ name: '-ping', value: '🏓 Pings the bot, if it\'s available it will answer.' });
 
 /* add metódus hozzáadása currencyhez */
 
 const leaderboardEmbed = (members) => {
 	const mm = members.map(member => member.id);
-	// console.log(mm);
 	return new Discord.MessageEmbed()
 	.setColor('ORANGE')
 	.setDescription(
 		currency.sort((a, b) => b.balance - a.balance)
-		.filter(user => client.users.cache.has(user.user_id) && mm.includes(user.user_id)/*&& message.guild.members.cache.has(user.user_id)*/ && user.user_id != '')
+		.filter(user => client.users.cache.has(user.user_id) && mm.includes(user.user_id) && user.user_id != '')
 		.first(15)
 		.map((user, position) => `#${position + 1} 👉 ${client.users.cache.get(user.user_id).username}: ${user.balance}`)
 		.join('\n'));
@@ -54,29 +61,6 @@ Reflect.defineProperty(currency, 'getBalance', {
 	},
 });
 
-// const embedTest = (channel, user) => {
-// 	const embed = new Discord.MessageEmbed()
-// 	.setColor('#000000')
-// 	.setTitle('Blackjack')
-// 	// .attachFiles(['./PNG/aces.png'])
-// 	.setDescription('KEK')
-// 	.setThumbnail('https://www.seekpng.com/png/full/819-8194226_blackjack-instant-game-logo-graphic-design.png')
-// 	.addFields(
-// 		{ name: 'Emberek: ', value: 'Lapok: ' },
-// 		{ name: user.username, value: `Minden is  ${user}`, inline: true },
-// 		{ name: 'Valaki0', value: 'Kevésbé minden is \nBusted!', inline: true },
-// 		{ name: 'Valaki1', value: 'Kevésbé minden is adaw sa\n`WON!`', inline: true },
-// 		{ name: 'Valaki2', value: 'Kevésbé minden is a sda a sd', inline: true },
-// 		{ name: 'Valaki3', value: 'Kevésbé minden is adwada sd sa', inline: true },
-// 		{ name: 'Valaki4', value: 'Kevésbé minden is adwada sd sa\n#1 Victory Royale!', inline: true },
-// 		)
-// 	// .setImage('attachment://aces.png')
-// 	.addField('\u200b', '\u200b');
-// 	// .setImage('https://media.giphy.com/media/26uf19Em2GHT2lkhW/giphy.gif');
-
-// 	channel.send(embed);
-// };
-
 client.once('ready', async () => {
 	const storedBalances = await Users.findAll();
 	storedBalances.forEach(b => {
@@ -86,8 +70,6 @@ client.once('ready', async () => {
 		}
 	});
 	console.log('I\'m ready!' + ` Logged in as '${client.user.tag}'`);
-	// const channel = client.channels.cache.find(ch => ch.name === 'botcsanel');
-	// embedTest(channel, client.user);
 });
 
 client.on('message', message => {
@@ -97,8 +79,19 @@ client.on('message', message => {
 	const command = args.shift().toLowerCase();
 
 	switch(command) {
+	case 'f':
+	case 'flip':
+		if (parseInt(args[0]) > 0 && parseInt(args[0]) <= currency.getBalance(message.author.id)) {
+			coinflip.flip(message, currency, parseInt(args[0]), args[1].toLowerCase());
+		}
+		else if (parseInt(args[1]) > 0 && parseInt(args[1]) <= currency.getBalance(message.author.id)) {
+			coinflip.flip(message, currency, parseInt(args[1]), args[0].toLowerCase());
+		}
+		break;
 	case 'ping':
-		message.channel.send(`Pong 🏓 ${message.author}`);
+		message.channel.send(new Discord.MessageEmbed()
+		.setColor('#D57A6F')
+		.setDescription(`Pong 🏓 ${message.author}`));
 		break;
 	case 'help':
 		message.channel.send(helpEmbed);
@@ -116,13 +109,21 @@ client.on('message', message => {
 		blackjack.start(message, currency);
 		break;
 	case 'balance':
-		message.reply(`you have ${currency.getBalance(message.author.id)}`);
-		break;
-	case 'test':
-		blackjack.test();
+		if (message.mentions.users.size) {
+			message.channel.send(new Discord.MessageEmbed()
+				.setColor('DARK_ORANGE')
+				.setDescription(`${message.mentions.users.first()} has: ${currency.getBalance(message.mentions.users.first().id)}`));
+		}
+		else {
+			message.channel.send(new Discord.MessageEmbed()
+				.setColor('DARK_ORANGE')
+				.setDescription(`${message.author}, you have: ${currency.getBalance(message.author.id)}`));
+		}
 		break;
 	case 'id':
-		message.channel.send(message.mentions.users.first().id);
+		if (args.length > 0) {
+			message.channel.send(message.mentions.users.first().id);
+		}
 		break;
 	case 'add':
 		if (message.author.id === '107398653542400000') {

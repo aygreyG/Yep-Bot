@@ -158,12 +158,10 @@ class BlackjackGame {
             });
     
             if (dealerValue > 16 && dealerValue <= 21) {
-                // console.log(dealerValue + ' returned');
                 return;
             }
             else if(dealerValue <= 16) {
                 giveCard(this, this.dealer, 1);
-                // console.log(dealerValue + ' gets a card');
             }
             else if (dealerValue > 21 && (this.dealer.card.includes(49) || this.dealer.card.includes(50) 
             || this.dealer.card.includes(51) || this.dealer.card.includes(48))) {
@@ -172,11 +170,9 @@ class BlackjackGame {
                         dealerValue -= 10;
                         if (dealerValue < 21) {
                             if (dealerValue > 16) {
-                                // console.log(dealerValue + ' returned2');
                                 return;
                             }
                             else {
-                                // console.log(dealerValue + ' gets a card2');
                                 giveCard(this, this.dealer, 1);
                             }
                         }
@@ -199,7 +195,6 @@ const checkPlayer = async (b, channel, player, currency) => {
                 resolve(true);
                 break;
             case 1:
-                console.log(`${player.name}: hit or stand`);
                 channel.send(b.tableEmbed);
                 resolve(hitorStand(b, channel, player, currency));
                 break;
@@ -252,7 +247,9 @@ const hitorStand = async (b, channel, player, currency) => {
         if (collected.first().emoji.name === '⬇️') {
             const standEmbed = new Discord.MessageEmbed()
             .setColor('GREY')
-            .setDescription(`<@${player.id}> stands.`);
+            .setDescription(`<@${player.id}> STANDS!`);
+
+            console.log(`${player.name} stands.`);
 
             channel.send(standEmbed);
             msg.delete().catch(console.error);
@@ -262,6 +259,8 @@ const hitorStand = async (b, channel, player, currency) => {
             .setColor('GREY')
             .setDescription(`<@${player.id}> HITS!`);
 
+            console.log(`${player.name} hits.`);
+
             channel.send(hitEmbed);
             giveCard(b, player, 1);
 
@@ -269,7 +268,7 @@ const hitorStand = async (b, channel, player, currency) => {
             ended = false;
         }
     }).catch(() => {
-        console.log('ran out of time kek');
+        console.log(`${player.name} ran out of time kek`);
         
         const timeEmbed = new Discord.MessageEmbed()
         .setColor('RED')
@@ -296,16 +295,22 @@ const hitStart = async (b, channel, player, currency) => {
 const delay = (n) => new Promise(r => setTimeout(r, n * 1000));
 
 const bet = async (player, channel, currency) => {
+    const indebt = currency.getBalance(player.id) <= 0;
+    let string = `<@${player.id}> ` + 'Give me a bet😠👇NOW! with \'-bet <amount>\'' + 
+    ` You currently have: ${currency.getBalance(player.id)}, if you bet more than you have then it won't do anything!`;
+    if (indebt) {
+        string = `<@${player.id}> you don't have money, so you can only bet 1, with \`-bet 1\`!`;
+    }
     const betEmbed = new Discord.MessageEmbed()
-    .setColor('GOLD')
-    .setDescription(`<@${player.id}> ` + 'Give me a bet😠👇NOW! with \'-bet <amount>\'' + 
-    ` You currently have: ${currency.getBalance(player.id)}, if you bet more than you have then it won't do anything!`);
+    .setColor('DARK_GOLD')
+    .setDescription(string);
     const ms = await channel.send(betEmbed);
 
     return new Promise((resolve) => {
         const filter = m => {
             return m.content.startsWith('-bet') && m.author.id === player.id
-            && parseInt(m.content.slice(4).trim()) <= currency.getBalance(player.id) && parseInt(m.content.slice(4).trim()) > 0;
+            && ((parseInt(m.content.slice(4).trim()) <= currency.getBalance(player.id) && parseInt(m.content.slice(4).trim()) > 0)
+            || (parseInt(m.content.slice(4).trim()) == 1 && indebt));
         };
 
         const collector = channel.createMessageCollector(filter, { max: 1, time: 10000 });
@@ -313,7 +318,7 @@ const bet = async (player, channel, currency) => {
         collector.on('collect', mess => {
             player.bet = parseInt(mess.content.slice(4).trim());
             currency.add(player.id, -player.bet);
-            console.log(`${player.name}: ${player.bet}`);
+            console.log(`${player.name}'s bet: ${player.bet}`);
 
             const betreply = new Discord.MessageEmbed()
             .setColor('DARK_GOLD')
@@ -353,7 +358,7 @@ const start = (message, currency) => {
     servers.push(b);
 
     const startEmbed = new Discord.MessageEmbed()
-    .setColor('GREEN')
+    .setColor('#BFF2A0')
     .setDescription(`${message.author} started blackjack, join by clicking ✅ under the message, u have 5 secs!!!`);
 
     message.channel.send(startEmbed)
@@ -392,14 +397,12 @@ const start = (message, currency) => {
                 .setDescription('No players joined');
 
                 m.channel.send(notEnoughPlayersEmbed);
-
                 return;
             }
 
             const mchannel = m.channel;
 
             for (const player of b.players) {
-                console.log(player.name);
                 await bet(player, mchannel, currency);
             }
 
