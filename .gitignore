@@ -3,4 +3,4 @@ node_modules
 chat
 hello.js
 package-lock.json
-config.json
+/config.json
