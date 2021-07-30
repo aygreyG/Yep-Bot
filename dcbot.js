@@ -42,7 +42,7 @@ Reflect.defineProperty(currency, 'add', {
 		}
 		const newUser = await Users.create({ user_id: id, balance: amount });
 		currency.set(id, newUser);
-		console.log('new user created: ' + user.user_id);
+		console.log('new user created: ' + newUser.user_id);
 		return newUser;
 	},
 });
