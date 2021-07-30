@@ -7,8 +7,8 @@ const Discord = require('discord.js');
 
 // all of the cards
 const CardNumber = 52;
-// max number of one card
-const MaxCard = 1;
+// max number of one card (how many decks are used)
+const MaxCard = 2;
 
 const servers = [];
 
