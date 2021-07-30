@@ -5,7 +5,6 @@ const blackjack = require('./blackjack');
 const coinflip = require('./coinflip');
 
 const { Users } = require('./dbObjects');
-const { Op } = require('sequelize');
 const currency = new Discord.Collection();
 
 // Help szövege:
@@ -13,12 +12,12 @@ const helpEmbed = new Discord.MessageEmbed()
 .setColor('#ADE9F2')
 .setDescription('__**Commands:**__')
 .addFields(
-	{ name: '-help', value: '❓ Lists all available commands.' },
-	{ name: '-b/-blackjack', value: '🃏 Starts a new blackjack game.' },
-	{ name: '-f/-flip <your bet> <heads/tails>', value: '🪙 Flips a coin.' },
-	{ name: '-balance/-balance <user tag>', value: '💰 Shows you your or the tagged user\'s balance.' },
-	{ name: '-l/-leaderboard', value: '📋 Shows you the top 15 wealthiest user on the server.' },
-	{ name: '-ping', value: '🏓 Pings the bot, if it\'s available it will answer.' });
+	{ name: `${prefix}help`, value: '❓ Lists all available commands.' },
+	{ name: `${prefix}b/-blackjack`, value: '🃏 Starts a new blackjack game.' },
+	{ name: `${prefix}f/${prefix}flip <your bet> <heads/tails>`, value: '🪙 Flips a coin.' },
+	{ name: `${prefix}balance/${prefix}balance <user tag>`, value: '💰 Shows you your or the tagged user\'s balance.' },
+	{ name: `${prefix}l/${prefix}leaderboard`, value: '📋 Shows you the top 15 wealthiest user on the server.' },
+	{ name: `${prefix}ping`, value: '🏓 Pings the bot, if it\'s available it will answer.' });
 
 /* add metódus hozzáadása currencyhez */
 
@@ -63,6 +62,7 @@ Reflect.defineProperty(currency, 'getBalance', {
 
 client.once('ready', async () => {
 	const storedBalances = await Users.findAll();
+	client.user.setActivity('-help', { type: 'LISTENING' });
 	storedBalances.forEach(b => {
 		if (b.user_id != '' && b.user_id != 'Ez egy id' && b.user_id > 0) {
 			currency.set(b.user_id, b);
@@ -81,10 +81,10 @@ client.on('message', message => {
 	switch(command) {
 	case 'f':
 	case 'flip':
-		if (parseInt(args[0]) > 0 && parseInt(args[0]) <= currency.getBalance(message.author.id)) {
+		if ((parseInt(args[0]) > 0 && parseInt(args[0]) <= currency.getBalance(message.author.id)) || (parseInt(args[0]) == 1 && currency.getBalance(message.author.id) <= 0)) {
 			coinflip.flip(message, currency, parseInt(args[0]), args[1].toLowerCase());
 		}
-		else if (parseInt(args[1]) > 0 && parseInt(args[1]) <= currency.getBalance(message.author.id)) {
+		else if ((parseInt(args[1]) > 0 && parseInt(args[1]) <= currency.getBalance(message.author.id)) || (parseInt(args[1]) == 1 && currency.getBalance(message.author.id) <= 0)) {
 			coinflip.flip(message, currency, parseInt(args[1]), args[0].toLowerCase());
 		}
 		break;

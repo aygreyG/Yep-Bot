@@ -249,7 +249,7 @@ const hitorStand = async (b, channel, player, currency) => {
             .setColor('GREY')
             .setDescription(`<@${player.id}> STANDS!`);
 
-            console.log(`${player.name} stands.`);
+            // console.log(`${player.name} stands.`);
 
             channel.send(standEmbed);
             msg.delete().catch(console.error);
@@ -259,7 +259,7 @@ const hitorStand = async (b, channel, player, currency) => {
             .setColor('GREY')
             .setDescription(`<@${player.id}> HITS!`);
 
-            console.log(`${player.name} hits.`);
+            // console.log(`${player.name} hits.`);
 
             channel.send(hitEmbed);
             giveCard(b, player, 1);
@@ -359,13 +359,13 @@ const start = (message, currency) => {
 
     const startEmbed = new Discord.MessageEmbed()
     .setColor('#BFF2A0')
-    .setDescription(`${message.author} started blackjack, join by clicking ✅ under the message, u have 5 secs!!!`);
+    .setDescription(`${message.author} started blackjack, join by clicking ✅ under the message, u have 10 secs!!!`);
 
     message.channel.send(startEmbed)
     .then(m => {
         m.react('✅');
         const rfilter = (reaction, user) => !b.players.includes(user.id) && reaction.emoji.name === '✅' && !user.bot;
-        const rcollector = m.createReactionCollector(rfilter, { time: 5000 });
+        const rcollector = m.createReactionCollector(rfilter, { time: 10000 });
 
         rcollector.on('collect', (reaction, user) => {
             let has = false;
@@ -488,6 +488,16 @@ const start = (message, currency) => {
                             });
                         }
                         mchannel.send(b.tableEmbed);
+                        let table = '';
+                        b.players.forEach(player => {
+                            if (player != b.dealer) {
+                                table += `${player.name} ${player.doneReason} bet: ${player.bet}, `;
+                            }
+                            else {
+                                table += `${player.name} ${player.doneReason}`;
+                            }
+                        });
+                        console.log(table);
                     }
                 }
             }

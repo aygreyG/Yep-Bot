@@ -4,3 +4,4 @@ chat
 hello.js
 package-lock.json
 /config.json
+nodemon.json
