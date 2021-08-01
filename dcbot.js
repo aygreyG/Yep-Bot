@@ -62,7 +62,7 @@ Reflect.defineProperty(currency, 'getBalance', {
 
 client.once('ready', async () => {
 	const storedBalances = await Users.findAll();
-	client.user.setActivity('-help', { type: 'LISTENING' });
+	client.user.setActivity(`${prefix}help`, { type: 'LISTENING' });
 	storedBalances.forEach(b => {
 		if (b.user_id != '' && b.user_id != 'Ez egy id' && b.user_id > 0) {
 			currency.set(b.user_id, b);

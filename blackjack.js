@@ -1,5 +1,6 @@
 const { Cards } = require('./cards.json');
 const Discord = require('discord.js');
+const { prefix } = require('./config.json');
 
 /* 312db 6 decknél
 2 3 4 5 6 7 8 9 10 J Q K (10) A (1 v 11)
@@ -302,10 +303,10 @@ const delay = (n) => new Promise(r => setTimeout(r, n * 1000));
 
 const bet = async (player, channel, currency) => {
     const indebt = currency.getBalance(player.id) <= 0;
-    let string = `<@${player.id}> ` + 'Give me a bet😠👇NOW! with \'-bet <amount>\'' + 
+    let string = `<@${player.id}> ` + 'Give me a bet😠👇NOW! with \'' + prefix + 'bet <amount>\'' + 
     ` You currently have: ${currency.getBalance(player.id)}, if you bet more than you have then it won't do anything!`;
     if (indebt) {
-        string = `<@${player.id}> you don't have money, so you can only bet 1, with \`-bet 1\`!`;
+        string = `<@${player.id}> you don't have money, so you can only bet 1, with \`${prefix}bet 1\`!`;
     }
     const betEmbed = new Discord.MessageEmbed()
     .setColor('DARK_GOLD')
