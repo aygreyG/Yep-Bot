@@ -118,7 +118,7 @@ class BlackjackGame {
 
     /**
      * 
-     * @returns a Discord embed object of the currency table
+     * @returns a Discord embed object of the table
      */
     calcTableEmbed() {
         const embed = new Discord.MessageEmbed()
@@ -152,32 +152,38 @@ class BlackjackGame {
      */
     calcDealerGet() {
         while (this.dealer.valueCheck === 1) {
+            console.log('Dealerget runs...');
+            // összeszámolja az értékeket
             let dealerValue = 0;
             this.dealer.card.forEach(card => {
                 dealerValue += Cards[card].value;
             });
-    
+            // ha nagyobb 16-nál és 21-nél kisebb/egyenlő akkor leáll mert megfelelő
             if (dealerValue > 16 && dealerValue <= 21) {
                 return;
             }
+            // ha kisebb mint 16 akkor kap kártyát mert nagyobbnak kell lennie
             else if(dealerValue <= 16) {
                 giveCard(this, this.dealer, 1);
             }
-            else if (dealerValue > 21 && (this.dealer.card.includes(49) || this.dealer.card.includes(50) 
+            // ha nagyobb 21-nél és van ace kártyája --> kivonja az értéket és ha kell ad még kártyát, vagy visszatér
+            else if (dealerValue > 21 && (this.dealer.card.includes(49) || this.dealer.card.includes(50)
             || this.dealer.card.includes(51) || this.dealer.card.includes(48))) {
-                this.dealer.card.forEach(card => {
+                // i hate Array.forEach 🙂 for of is way better
+                for (const card of this.dealer.card) {
                     if (Cards[card].value == 11) {
                         dealerValue -= 10;
-                        if (dealerValue < 21) {
+                        if (dealerValue <= 21) {
                             if (dealerValue > 16) {
                                 return;
                             }
                             else {
                                 giveCard(this, this.dealer, 1);
+                                break;
                             }
                         }
                     }
-                });
+                }
             }
         }
     }
@@ -211,14 +217,14 @@ const checkPlayer = async (b, channel, player, currency) => {
 };
 
 const giveCard = (b, player, cNum) => {
+    // console.log(b.arr);
     let a = cNum;
-    
+
     while (a !== 0) {
         const rand = Math.floor(Math.random() * 52);
-        if (rand === 52) {
-            continue;
-        }
-        if (b.arr[rand] > 0) {
+        // console.log(rand);
+        if (rand != 52 && b.arr[rand] > 0) {
+            // console.log(rand);
             b.arr[rand]--;
             a--;
             player.card.push(rand);
@@ -249,7 +255,7 @@ const hitorStand = async (b, channel, player, currency) => {
             .setColor('GREY')
             .setDescription(`<@${player.id}> STANDS!`);
 
-            // console.log(`${player.name} stands.`);
+            console.log(`${player.name} stands.`);
 
             channel.send(standEmbed);
             msg.delete().catch(console.error);
@@ -259,7 +265,7 @@ const hitorStand = async (b, channel, player, currency) => {
             .setColor('GREY')
             .setDescription(`<@${player.id}> HITS!`);
 
-            // console.log(`${player.name} hits.`);
+            console.log(`${player.name} hits.`);
 
             channel.send(hitEmbed);
             giveCard(b, player, 1);
@@ -347,15 +353,13 @@ const bet = async (player, channel, currency) => {
 };
 
 const start = (message, currency) => {
-    for (const server of servers) {
-        if (server.guildid == message.guild.id) {
-            message.reply('There is already a game!');
-            return;
-        }
-    }
-
+    // console.log(servers);
     const b = new BlackjackGame(message.guild.id);
-    servers.push(b);
+    if (servers.includes(message.guild.id)) {
+        message.channel.send(new Discord.MessageEmbed().setColor('RED').setDescription('There is a game already in this server!'));
+        return;
+    }
+    servers.push(message.guild.id);
 
     const startEmbed = new Discord.MessageEmbed()
     .setColor('#BFF2A0')
@@ -397,6 +401,7 @@ const start = (message, currency) => {
                 .setDescription('No players joined');
 
                 m.channel.send(notEnoughPlayersEmbed);
+                servers.splice(servers.indexOf(b), 1);
                 return;
             }
 
@@ -501,8 +506,8 @@ const start = (message, currency) => {
                     }
                 }
             }
+            servers.splice(servers.indexOf(b), 1);
         });
-        servers.splice(servers.indexOf(b), 1);
     });
 };
 

@@ -13,7 +13,7 @@ const helpEmbed = new Discord.MessageEmbed()
 .setDescription('__**Commands:**__')
 .addFields(
 	{ name: `${prefix}help`, value: '❓ Lists all available commands.' },
-	{ name: `${prefix}b/-blackjack`, value: '🃏 Starts a new blackjack game.' },
+	{ name: `${prefix}b/${prefix}blackjack`, value: '🃏 Starts a new blackjack game.' },
 	{ name: `${prefix}f/${prefix}flip <your bet> <heads/tails>`, value: '🪙 Flips a coin.' },
 	{ name: `${prefix}balance/${prefix}balance <user tag>`, value: '💰 Shows you your or the tagged user\'s balance.' },
 	{ name: `${prefix}l/${prefix}leaderboard`, value: '📋 Shows you the top 15 wealthiest user on the server.' },
@@ -82,10 +82,12 @@ client.on('message', message => {
 		switch (command) {
 			case 'f':
 			case 'flip':
-				if ((parseInt(args[0]) > 0 && parseInt(args[0]) <= currency.getBalance(message.author.id)) || (parseInt(args[0]) == 1 && currency.getBalance(message.author.id) <= 0)) {
+				if ((parseInt(args[0]) > 0 && parseInt(args[0]) <= currency.getBalance(message.author.id) && (args[1].toLowerCase() == 'tails' || args[1].toLowerCase() == 'heads')) 
+				|| (parseInt(args[0]) == 1 && currency.getBalance(message.author.id) <= 0 && (args[1].toLowerCase() == 'tails' || args[1].toLowerCase() == 'heads'))) {
 					coinflip.flip(message, currency, parseInt(args[0]), args[1].toLowerCase());
 				}
-				else if ((parseInt(args[1]) > 0 && parseInt(args[1]) <= currency.getBalance(message.author.id)) || (parseInt(args[1]) == 1 && currency.getBalance(message.author.id) <= 0)) {
+				else if ((parseInt(args[1]) > 0 && parseInt(args[1]) <= currency.getBalance(message.author.id) && (args[0].toLowerCase() == 'tails' || args[0].toLowerCase() == 'heads')) 
+				|| (parseInt(args[1]) == 1 && currency.getBalance(message.author.id) <= 0 && (args[0].toLowerCase() == 'tails' || args[0].toLowerCase() == 'heads'))) {
 					coinflip.flip(message, currency, parseInt(args[1]), args[0].toLowerCase());
 				}
 				break;
@@ -109,10 +111,12 @@ client.on('message', message => {
 		switch(command) {
 		case 'f':
 		case 'flip':
-			if ((parseInt(args[0]) > 0 && parseInt(args[0]) <= currency.getBalance(message.author.id)) || (parseInt(args[0]) == 1 && currency.getBalance(message.author.id) <= 0)) {
+			if ((parseInt(args[0]) > 0 && parseInt(args[0]) <= currency.getBalance(message.author.id) && (args[1].toLowerCase() == 'tails' || args[1].toLowerCase() == 'heads')) 
+			|| (parseInt(args[0]) == 1 && currency.getBalance(message.author.id) <= 0 && (args[1].toLowerCase() == 'tails' || args[1].toLowerCase() == 'heads'))) {
 				coinflip.flip(message, currency, parseInt(args[0]), args[1].toLowerCase());
 			}
-			else if ((parseInt(args[1]) > 0 && parseInt(args[1]) <= currency.getBalance(message.author.id)) || (parseInt(args[1]) == 1 && currency.getBalance(message.author.id) <= 0)) {
+			else if ((parseInt(args[1]) > 0 && parseInt(args[1]) <= currency.getBalance(message.author.id) && (args[0].toLowerCase() == 'tails' || args[0].toLowerCase() == 'heads')) 
+			|| (parseInt(args[1]) == 1 && currency.getBalance(message.author.id) <= 0 && (args[0].toLowerCase() == 'tails' || args[0].toLowerCase() == 'heads'))) {
 				coinflip.flip(message, currency, parseInt(args[1]), args[0].toLowerCase());
 			}
 			break;
