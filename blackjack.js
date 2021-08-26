@@ -315,7 +315,7 @@ const bet = async (player, channel, currency) => {
 
     return new Promise((resolve) => {
         const filter = m => {
-            return m.content.startsWith('-bet') && m.author.id === player.id
+            return m.content.startsWith(`${prefix}bet`) && m.author.id === player.id
             && ((parseInt(m.content.slice(4).trim()) <= currency.getBalance(player.id) && parseInt(m.content.slice(4).trim()) > 0)
             || (parseInt(m.content.slice(4).trim()) == 1 && indebt));
         };
