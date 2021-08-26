@@ -29,7 +29,8 @@ const leaderboardEmbed = (members) => {
 		currency.sort((a, b) => b.balance - a.balance)
 		.filter(user => client.users.cache.has(user.user_id) && mm.includes(user.user_id) && user.user_id != '')
 		.first(15)
-		.map((user, position) => `#${position + 1} 👉 ${client.users.cache.get(user.user_id).username}: ${user.balance}`)
+		.map((user, position) => `#${position + 1} 👉 ${client.users.cache.get(user.user_id).username}: ${
+			user.balance}`)
 		.join('\n'));
 };
 
@@ -82,12 +83,16 @@ client.on('message', message => {
 		switch (command) {
 			case 'f':
 			case 'flip':
-				if ((parseInt(args[0]) > 0 && parseInt(args[0]) <= currency.getBalance(message.author.id) && (args[1].toLowerCase() == 'tails' || args[1].toLowerCase() == 'heads')) 
-				|| (parseInt(args[0]) == 1 && currency.getBalance(message.author.id) <= 0 && (args[1].toLowerCase() == 'tails' || args[1].toLowerCase() == 'heads'))) {
+				if ((parseInt(args[0]) > 0 && parseInt(args[0]) <= currency.getBalance(message.author.id) &&
+					(args[1].toLowerCase() == 'tails' || args[1].toLowerCase() == 'heads')) 
+				|| (parseInt(args[0]) == 1 && currency.getBalance(message.author.id) <= 0 &&
+					(args[1].toLowerCase() == 'tails' || args[1].toLowerCase() == 'heads'))) {
 					coinflip.flip(message, currency, parseInt(args[0]), args[1].toLowerCase());
 				}
-				else if ((parseInt(args[1]) > 0 && parseInt(args[1]) <= currency.getBalance(message.author.id) && (args[0].toLowerCase() == 'tails' || args[0].toLowerCase() == 'heads')) 
-				|| (parseInt(args[1]) == 1 && currency.getBalance(message.author.id) <= 0 && (args[0].toLowerCase() == 'tails' || args[0].toLowerCase() == 'heads'))) {
+				else if ((parseInt(args[1]) > 0 && parseInt(args[1]) <= currency.getBalance(message.author.id) &&
+					(args[0].toLowerCase() == 'tails' || args[0].toLowerCase() == 'heads')) 
+				|| (parseInt(args[1]) == 1 && currency.getBalance(message.author.id) <= 0 &&
+					(args[0].toLowerCase() == 'tails' || args[0].toLowerCase() == 'heads'))) {
 					coinflip.flip(message, currency, parseInt(args[1]), args[0].toLowerCase());
 				}
 				break;
@@ -111,12 +116,16 @@ client.on('message', message => {
 		switch(command) {
 		case 'f':
 		case 'flip':
-			if ((parseInt(args[0]) > 0 && parseInt(args[0]) <= currency.getBalance(message.author.id) && (args[1].toLowerCase() == 'tails' || args[1].toLowerCase() == 'heads')) 
-			|| (parseInt(args[0]) == 1 && currency.getBalance(message.author.id) <= 0 && (args[1].toLowerCase() == 'tails' || args[1].toLowerCase() == 'heads'))) {
+			if ((parseInt(args[0]) > 0 && parseInt(args[0]) <= currency.getBalance(message.author.id) &&
+				(args[1].toLowerCase() == 'tails' || args[1].toLowerCase() == 'heads')) 
+			|| (parseInt(args[0]) == 1 && currency.getBalance(message.author.id) <= 0 &&
+				(args[1].toLowerCase() == 'tails' || args[1].toLowerCase() == 'heads'))) {
 				coinflip.flip(message, currency, parseInt(args[0]), args[1].toLowerCase());
 			}
-			else if ((parseInt(args[1]) > 0 && parseInt(args[1]) <= currency.getBalance(message.author.id) && (args[0].toLowerCase() == 'tails' || args[0].toLowerCase() == 'heads')) 
-			|| (parseInt(args[1]) == 1 && currency.getBalance(message.author.id) <= 0 && (args[0].toLowerCase() == 'tails' || args[0].toLowerCase() == 'heads'))) {
+			else if ((parseInt(args[1]) > 0 && parseInt(args[1]) <= currency.getBalance(message.author.id) &&
+				(args[0].toLowerCase() == 'tails' || args[0].toLowerCase() == 'heads')) 
+			|| (parseInt(args[1]) == 1 && currency.getBalance(message.author.id) <= 0 &&
+				(args[0].toLowerCase() == 'tails' || args[0].toLowerCase() == 'heads'))) {
 				coinflip.flip(message, currency, parseInt(args[1]), args[0].toLowerCase());
 			}
 			break;
@@ -144,7 +153,8 @@ client.on('message', message => {
 			if (message.mentions.users.size) {
 				message.channel.send(new Discord.MessageEmbed()
 					.setColor('DARK_ORANGE')
-					.setDescription(`${message.mentions.users.first()} has: ${currency.getBalance(message.mentions.users.first().id)}`));
+					.setDescription(`${message.mentions.users.first()} has: ${currency.getBalance(
+						message.mentions.users.first().id)}`));
 			}
 			else {
 				message.channel.send(new Discord.MessageEmbed()
