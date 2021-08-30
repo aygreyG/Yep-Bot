@@ -3,6 +3,7 @@ const client = new Discord.Client();
 const { prefix, token } = require('./config.json');
 const blackjack = require('./blackjack');
 const coinflip = require('./coinflip');
+const { oneVOne } = require('./1v1');
 
 const { Users } = require('./dbObjects');
 const currency = new Discord.Collection();
@@ -114,6 +115,14 @@ client.on('message', message => {
 	}
 	else {
 		switch(command) {
+		case '1v1':
+			if (args[0] !== undefined && message.mentions.users.size) {
+				if (message.mentions.users.first().id !== message.author.id && !message.mentions.users.first().bot) {
+					// console.log(message.author.id + ' ' + args[0].id);
+					oneVOne(message.channel, currency, message.author.id, message.mentions.users.first().id);
+				}
+			}
+			break;
 		case 'f':
 		case 'flip':
 			if ((parseInt(args[0]) > 0 && parseInt(args[0]) <= currency.getBalance(message.author.id) &&
