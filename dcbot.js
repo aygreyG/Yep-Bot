@@ -16,9 +16,11 @@ const helpEmbed = new Discord.MessageEmbed()
 	{ name: `${prefix}help`, value: '❓ Lists all available commands.' },
 	{ name: `${prefix}b/${prefix}blackjack`, value: '🃏 Starts a new blackjack game.' },
 	{ name: `${prefix}f/${prefix}flip <your bet> <heads/tails>`, value: '🪙 Flips a coin.' },
+	{ name: `${prefix}1v1 <your opponent's tag>`, value: '😒👉👈😒 Challenge a user on the server, whoever guesses closer to the random number between 0-100 wins!' },
 	{ name: `${prefix}balance/${prefix}balance <user tag>`, value: '💰 Shows you your or the tagged user\'s balance.' },
 	{ name: `${prefix}l/${prefix}leaderboard`, value: '📋 Shows you the top 15 wealthiest user on the server.' },
-	{ name: `${prefix}ping`, value: '🏓 Pings the bot, if it\'s available it will answer.' });
+	{ name: `${prefix}ping`, value: '🏓 Pings the bot, if it\'s available it will answer.' },
+	);
 
 /* add metódus hozzáadása currencyhez */
 
