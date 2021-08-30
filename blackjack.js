@@ -202,7 +202,7 @@ const checkPlayer = async (b, channel, player, currency) => {
                 resolve(true);
                 break;
             case 1:
-                channel.send(b.tableEmbed);
+                channel.send({embeds:[b.tableEmbed]});
                 resolve(hitorStand(b, channel, player, currency));
                 break;
             case 2:
@@ -238,7 +238,7 @@ const hitorStand = async (b, channel, player, currency) => {
     .setColor('BLURPLE')
     .setDescription(`<@${player.id}> react with: ⬇️ if you want to stand, ⬆️ if you want to hit!`);
 
-    const msg = await channel.send(hitembed);
+    const msg = await channel.send({embeds:[hitembed]});
     await msg.react('⬇️');
     await msg.react('⬆️');
 
@@ -249,7 +249,7 @@ const hitorStand = async (b, channel, player, currency) => {
 
     let ended = true;
 
-    await msg.awaitReactions(filter, { max: 1, time: 10000, errors: ['time'] })
+    await msg.awaitReactions({ filter: filter, max: 1, time: 10000, errors: ['time'] })
     .then(collected => {
         if (collected.first().emoji.name === '⬇️') {
             const standEmbed = new Discord.MessageEmbed()
@@ -258,7 +258,7 @@ const hitorStand = async (b, channel, player, currency) => {
 
             console.log(`${player.name} stands.`);
 
-            channel.send(standEmbed);
+            channel.send({embeds:[standEmbed]});
             msg.delete().catch(console.error);
         }
         if (collected.first().emoji.name === '⬆️') {
@@ -268,7 +268,7 @@ const hitorStand = async (b, channel, player, currency) => {
 
             console.log(`${player.name} hits.`);
 
-            channel.send(hitEmbed);
+            channel.send({embeds:[hitEmbed]});
             giveCard(b, player, 1);
 
             msg.delete().catch(console.error);
@@ -281,7 +281,7 @@ const hitorStand = async (b, channel, player, currency) => {
         .setColor('RED')
         .setDescription(`<@${player.id}> ran out of time (they stand)!`);
 
-        channel.send(timeEmbed);
+        channel.send({embeds:[timeEmbed]});
         msg.delete().catch(console.error);
     });
 
@@ -311,7 +311,7 @@ const bet = async (player, channel, currency) => {
     const betEmbed = new Discord.MessageEmbed()
     .setColor('DARK_GOLD')
     .setDescription(string);
-    const ms = await channel.send(betEmbed);
+    const ms = await channel.send({embeds:[betEmbed]});
 
     return new Promise((resolve) => {
         const filter = m => {
@@ -320,7 +320,7 @@ const bet = async (player, channel, currency) => {
             || (parseInt(m.content.slice(4).trim()) == 1 && indebt));
         };
 
-        const collector = channel.createMessageCollector(filter, { max: 1, time: 10000 });
+        const collector = channel.createMessageCollector({ filter: filter, max: 1, time: 10000 });
 
         collector.on('collect', mess => {
             player.bet = parseInt(mess.content.slice(4).trim());
@@ -331,7 +331,7 @@ const bet = async (player, channel, currency) => {
             .setColor('DARK_GOLD')
             .setDescription(`<@${player.id}> your bet: ${player.bet}`);
 
-            mess.reply(betreply);
+            mess.channel.send({embeds:[betreply]});
         });
 
         collector.on('end', (collected, reason) => {
@@ -339,7 +339,7 @@ const bet = async (player, channel, currency) => {
                 const removeEmbed = new Discord.MessageEmbed()
                 .setColor('RED')
                 .setDescription(`<@${player.id}> got removed because of no response!`);
-                channel.send(removeEmbed).then(async (message) => {
+                channel.send({embeds:[removeEmbed]}).then(async (message) => {
                     await delay(3);
                     message.delete().catch(console.error);
                 });
@@ -357,7 +357,7 @@ const start = (message, currency) => {
     // console.log(servers);
     const b = new BlackjackGame(message.guild.id);
     if (servers.includes(message.guild.id)) {
-        message.channel.send(new Discord.MessageEmbed().setColor('RED').setDescription('There is a game already in this server!'));
+        message.channel.send({embeds:[new Discord.MessageEmbed().setColor('RED').setDescription('There is a game already in this server!')]});
         return;
     }
     servers.push(message.guild.id);
@@ -366,11 +366,13 @@ const start = (message, currency) => {
     .setColor('#BFF2A0')
     .setDescription(`${message.author} started blackjack, join by clicking ✅ under the message, u have 10 secs!!!`);
 
-    message.channel.send(startEmbed)
+    message.channel.send({embeds:[startEmbed]})
     .then(m => {
         m.react('✅');
-        const rfilter = (reaction, user) => !b.players.includes(user.id) && reaction.emoji.name === '✅' && !user.bot;
-        const rcollector = m.createReactionCollector(rfilter, { time: 10000 });
+        const rfilter = (reaction, user) => {
+            return !b.players.includes(user.id) && reaction.emoji.name === '✅' && !user.bot;
+        };
+        const rcollector = m.createReactionCollector({ filter: rfilter, time: 10000 });
 
         rcollector.on('collect', (reaction, user) => {
             let has = false;
@@ -387,7 +389,7 @@ const start = (message, currency) => {
                 console.log(`${user.username} joined!`);
                 b.players.push(new Player(user.username, user.id));
 
-                m.channel.send(joinEmbed).then(async (joinmes) => {
+                m.channel.send({embeds:[joinEmbed]}).then(async (joinmes) => {
                     await delay(1);
                     joinmes.delete().catch(console.error);
                 });
@@ -401,7 +403,7 @@ const start = (message, currency) => {
                 .setColor('RED')
                 .setDescription('No players joined');
 
-                m.channel.send(notEnoughPlayersEmbed);
+                m.channel.send({embeds:[notEnoughPlayersEmbed]});
                 servers.splice(servers.indexOf(b), 1);
                 return;
             }
@@ -419,7 +421,7 @@ const start = (message, currency) => {
                 b.players.forEach(player => {
                     giveCard(b, player, 2);
                 });
-                mchannel.send(b.tableEmbed);
+                mchannel.send({embeds:[b.tableEmbed]});
                 
                 if (b.dealer.valueCheck === 2) {
                     b.players.forEach(player => {
@@ -437,7 +439,7 @@ const start = (message, currency) => {
                             player.doneReason = 'Got BlackJack!';
                         }
                     });
-                    mchannel.send(b.tableEmbed);
+                    mchannel.send({embeds:[b.tableEmbed]});
                 }
                 else {
                     for (const player of b.players) {
@@ -454,7 +456,7 @@ const start = (message, currency) => {
                         }
                     }
 
-                    mchannel.send(b.tableEmbed);
+                    mchannel.send({embeds:[b.tableEmbed]});
 
                     const playersfiltered = b.players.filter(player => !player.done);
 
@@ -493,7 +495,7 @@ const start = (message, currency) => {
                                 }
                             });
                         }
-                        mchannel.send(b.tableEmbed);
+                        mchannel.send({embeds:[b.tableEmbed]});
                         let table = '';
                         b.players.forEach(player => {
                             if (player != b.dealer) {

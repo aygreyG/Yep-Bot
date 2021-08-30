@@ -1,5 +1,5 @@
 const Discord = require('discord.js');
-const client = new Discord.Client();
+const client = new Discord.Client({ intents: [Discord.Intents.FLAGS.GUILDS, Discord.Intents.FLAGS.GUILD_MESSAGES, Discord.Intents.FLAGS.GUILD_MEMBERS, Discord.Intents.FLAGS.GUILD_MESSAGE_REACTIONS ] });
 const { prefix, token } = require('./config.json');
 const blackjack = require('./blackjack');
 const coinflip = require('./coinflip');
@@ -76,7 +76,7 @@ client.once('ready', async () => {
 	console.log('I\'m ready!' + ` Logged in as '${client.user.tag}'`);
 });
 
-client.on('message', message => {
+client.on('messageCreate', message => {
 	if (message.content.toLowerCase().includes('yep') && !message.author.bot) message.reply('COCK');
 	if (!message.content.startsWith(prefix) || message.author.bot) return;
 	const args = message.content.slice(prefix.length).trim().split(/ +/);
@@ -100,17 +100,17 @@ client.on('message', message => {
 				}
 				break;
 			case 'ping':
-				message.channel.send(new Discord.MessageEmbed()
-				.setColor('#D57A6F')
-				.setDescription(`Pong 🏓 ${message.author}`));
+				message.channel.send({ embeds: [new Discord.MessageEmbed()
+					.setColor('#D57A6F')
+					.setDescription(`Pong 🏓 ${message.author}`)] });
 				break;
 			case 'help':
-				message.channel.send(helpEmbed);
+				message.channel.send({ embeds: [helpEmbed] });
 				break;
 			case 'balance':
-				message.channel.send(new Discord.MessageEmbed()
-				.setColor('DARK_ORANGE')
-				.setDescription(`${message.author}, you have: ${currency.getBalance(message.author.id)}`));
+				message.channel.send({ embeds: [new Discord.MessageEmbed()
+					.setColor('DARK_ORANGE')
+					.setDescription(`${message.author}, you have: ${currency.getBalance(message.author.id)}`)] });
 				break;
 			default:
 		}
@@ -141,17 +141,17 @@ client.on('message', message => {
 			}
 			break;
 		case 'ping':
-			message.channel.send(new Discord.MessageEmbed()
-			.setColor('#D57A6F')
-			.setDescription(`Pong 🏓 ${message.author}`));
+			message.channel.send({ embeds: [new Discord.MessageEmbed()
+				.setColor('#D57A6F')
+				.setDescription(`Pong 🏓 ${message.author}`)] });
 			break;
 		case 'help':
-			message.channel.send(helpEmbed);
+			message.channel.send({ embeds: [helpEmbed] });
 			break;
 		case 'l':
 		case 'leaderboard':
 			message.guild.members.fetch().then(members => {
-				message.channel.send(leaderboardEmbed(members));
+				message.channel.send({ embeds: [leaderboardEmbed(members)] });
 			}).catch(console.error);
 			break;
 		case 'bet':
@@ -162,20 +162,20 @@ client.on('message', message => {
 			break;
 		case 'balance':
 			if (message.mentions.users.size) {
-				message.channel.send(new Discord.MessageEmbed()
+				message.channel.send({embeds:[new Discord.MessageEmbed()
 					.setColor('DARK_ORANGE')
 					.setDescription(`${message.mentions.users.first()} has: ${currency.getBalance(
-						message.mentions.users.first().id)}`));
+						message.mentions.users.first().id)}`)]});
 			}
 			else {
-				message.channel.send(new Discord.MessageEmbed()
+				message.channel.send({embeds:[new Discord.MessageEmbed()
 					.setColor('DARK_ORANGE')
-					.setDescription(`${message.author}, you have: ${currency.getBalance(message.author.id)}`));
+					.setDescription(`${message.author}, you have: ${currency.getBalance(message.author.id)}`)]});
 			}
 			break;
 		case 'id':
 			if (args.length > 0) {
-				message.channel.send(message.mentions.users.first().id);
+				message.channel.send({embeds:[message.mentions.users.first().id]});
 			}
 			break;
 		case 'add':

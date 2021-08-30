@@ -29,23 +29,23 @@ class Game {
 
 const oneVOne = async (channel, currency, authorid, opponentid) => {
     if (currency.getBalance(authorid) <= 0 || currency.getBalance(opponentid) <= 0) {
-        channel.send(new Discord.MessageEmbed()
+        channel.send({embeds:[new Discord.MessageEmbed()
         .setColor('RED')
-        .setDescription('You or your opponent doesn\'t have enough.'));
+        .setDescription('You or your opponent doesn\'t have enough.')]});
         return;
     }
 
     const maxbet = currency.getBalance(opponentid) >= currency.getBalance(authorid) ? currency.getBalance(authorid) : currency.getBalance(opponentid);
 
-    const betMessage = await channel.send(new Discord.MessageEmbed()
+    const betMessage = await channel.send({embeds:[new Discord.MessageEmbed()
     .setColor('BLURPLE')
-    .setDescription(`<@${authorid}> give me a bet with '${prefix}bet1v1 <amount>'. The maximum amount is: ${maxbet}. (You have 10 seconds)`));
+    .setDescription(`<@${authorid}> give me a bet with '${prefix}bet1v1 <amount>'. The maximum amount is: ${maxbet}. (You have 10 seconds)`)]});
 
     const filter = m => {
         return m.author.id == authorid && m.content.startsWith(prefix + 'bet1v1') && parseInt(m.content.slice(7).trim()) <= maxbet;
     };
 
-    const collector = channel.createMessageCollector(filter, { max: 1, time: 10000 });
+    const collector = channel.createMessageCollector({ filter: filter, max: 1, time: 10000 });
 
     await collector.on('collect', mess => {
         // console.log(parseInt(mess.content.slice(7).trim()));
@@ -64,11 +64,11 @@ const gameL = (game, channel) => {
         && parseInt(msg.content.trim()) >= 0;
     };
 
-    channel.send(new Discord.MessageEmbed()
+    channel.send({embeds:[new Discord.MessageEmbed()
     .setColor('BROWN')
-    .setDescription(`<@${game.authorid}>, <@${game.opponentid}> give me a number between 0-100, if you guess closer you win! (You have 10 seconds)`));
+    .setDescription(`<@${game.authorid}>, <@${game.opponentid}> give me a number between 0-100, if you guess closer you win! (You have 10 seconds)`)]});
 
-    const msgcollector = channel.createMessageCollector(msgFilter, { max: 2, time: 10000 });
+    const msgcollector = channel.createMessageCollector({ filter: msgFilter, max: 2, time: 10000 });
     let col = 0;
     
     msgcollector.on('collect', mes => {
@@ -82,24 +82,24 @@ const gameL = (game, channel) => {
             col++;
         }
         if(col === 2) {
-            channel.send(new Discord.MessageEmbed()
+            channel.send({embeds:[new Discord.MessageEmbed()
             .setColor('GREEN')
-            .setDescription(game.calcWinnerString(authornum, opponentnum)));
+            .setDescription(game.calcWinnerString(authornum, opponentnum))]});
         }
     });
 
     msgcollector.on('end', (collected, reason) => {
         if (reason === 'time') {
-            channel.send(new Discord.MessageEmbed().setColor('RED').setDescription('Someone did not give a number... 😡'));
+            channel.send({embeds:[new Discord.MessageEmbed().setColor('RED').setDescription('Someone did not give a number... 😡')]});
         }
     });
 };
 
 const isBetValid = async (channel, opponentid, authorid, bet, currency) => {
-    const betaccept = await channel.send(new Discord.MessageEmbed()
+    const betaccept = await channel.send({embeds:[new Discord.MessageEmbed()
     .setColor('BLUE')
     .setDescription(`<@${opponentid}> react to this message if the bet(${
-    bet}) is good for you! (You have 5 seconds)`));
+    bet}) is good for you! (You have 5 seconds)`)]});
     
     betaccept.react('✅');
     betaccept.react('❌');
@@ -108,7 +108,7 @@ const isBetValid = async (channel, opponentid, authorid, bet, currency) => {
         return user.id == opponentid && (reaction.emoji.name === '❌' || reaction.emoji.name === '✅');
     };
     
-    const reactionC = betaccept.createReactionCollector(reactionFilter, { max: 1, time: 5000 });
+    const reactionC = betaccept.createReactionCollector({ filter: reactionFilter, max: 1, time: 5000 });
 
     reactionC.on('collect', (reaction, user) => {
         if (reaction.emoji.name === '✅') {

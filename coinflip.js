@@ -35,24 +35,24 @@ const flip = (message, currency, bet, headsOrTails) => {
     if ((headsOrTails == 'heads' && rand < 0.5) || (headsOrTails == 'tails' && rand >= 0.5)) {
         currency.add(message.author.id, bet);
         console.log(`${message.author.username} won: ${bet}`);
-        message.channel.send(new Discord.MessageEmbed()
+        message.channel.send({embeds:[new Discord.MessageEmbed()
         .setColor('#AFEC28')
         .setAuthor('Yep Coinflip')
-        .attachFiles(['./fos.png'])
-        .setThumbnail('attachment://fos.png')
+        // .attachFiles(['./fos.png'])
+        .setThumbnail('https://i.imgur.com/Ol3ZXQV.png')
         .addField(`${headsOrTails.toUpperCase()}`, `${message.author} won: \`${bet}\``)
-        .setFooter(`Tails: ${coins.tails}, Heads: ${coins.heads}.`));
+        .setFooter(`Tails: ${coins.tails}, Heads: ${coins.heads}.`)]});
     }
     else {
         currency.add(message.author.id, -bet);
         console.log(`${message.author.username} lost: ${bet}`);
-        message.channel.send(new Discord.MessageEmbed()
+        message.channel.send({embeds:[new Discord.MessageEmbed()
         .setColor('#A00000')
         .setAuthor('Yep Coinflip')
-        .attachFiles(['./fos.png'])
-        .setThumbnail('attachment://fos.png')
+        // .attachFiles(['./fos.png'])
+        .setThumbnail('https://i.imgur.com/Ol3ZXQV.png')
         .addField(`${headsOrTails == 'heads' ? 'TAILS' : 'HEADS' }`, `${message.author} lost: \`${bet}\``)
-        .setFooter(`Tails: ${coins.tails}, Heads: ${coins.heads}.`));
+        .setFooter(`Tails: ${coins.tails}, Heads: ${coins.heads}.`)]});
     }
 };
 
