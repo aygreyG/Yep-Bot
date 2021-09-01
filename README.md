@@ -14,3 +14,7 @@ Meméne?
     - @discordjs/opus
     - ffmpeg-static
     - sodium helyett libsodium-wrappers
+
+- Youtube stuff:
+    - ytdl-core
+    - youtube-dl-exec

@@ -1,4 +1,25 @@
 const Discord = require("discord.js");
+const { prefix, token } = require("./config.json");
+const blackjack = require("./blackjack");
+const coinflip = require("./coinflip");
+const { oneVOne } = require("./1v1");
+const { Users } = require("./dbObjects");
+
+const {
+  AudioPlayerStatus,
+  AudioResource,
+  entersState,
+  joinVoiceChannel,
+  VoiceConnectionStatus,
+} = require("@discordjs/voice");
+
+const { Track } = require("./track.js");
+const { MusicSubscription } = require("./subs.js");
+
+// import { Track } from "./track";
+// import { MusicSubscription } from "./subs";
+
+const currency = new Discord.Collection();
 const client = new Discord.Client({
   intents: [
     Discord.Intents.FLAGS.GUILDS,
@@ -7,13 +28,6 @@ const client = new Discord.Client({
     Discord.Intents.FLAGS.GUILD_MESSAGE_REACTIONS,
   ],
 });
-const { prefix, token } = require("./config.json");
-const blackjack = require("./blackjack");
-const coinflip = require("./coinflip");
-const { oneVOne } = require("./1v1");
-
-const { Users } = require("./dbObjects");
-const currency = new Discord.Collection();
 
 // Help szövege:
 const helpEmbed = new Discord.MessageEmbed()
@@ -111,7 +125,10 @@ client.once("ready", async () => {
   console.log("I'm ready!" + ` Logged in as '${client.user.tag}'`);
 });
 
-client.on("messageCreate", (message) => {
+// Key: Discord.Snowflake, Value: MusicSubscription
+const subcriptions = new Map();
+
+client.on("messageCreate", async (message) => {
   if (message.content.toLowerCase().includes("yep") && !message.author.bot)
     message.reply("COCK");
   if (!message.content.startsWith(prefix) || message.author.bot) return;
@@ -184,6 +201,7 @@ client.on("messageCreate", (message) => {
       default:
     }
   } else {
+    let subscription = subcriptions.get(message.guildId);
     switch (command) {
       case "1v1":
         if (args[0] !== undefined && message.mentions.users.size) {
@@ -310,6 +328,140 @@ client.on("messageCreate", (message) => {
           message.reply(
             `you now have ${currency.getBalance(message.author.id)}`
           );
+        }
+        break;
+      case "play":
+      case "p":
+        const url = args[0];
+        // console.log(message.member.voice.channel);
+
+        if (
+          !subcriptions.has(message.guildId) &&
+          message.member.voice.channel &&
+          message.member instanceof Discord.GuildMember
+        ) {
+          // TODO: remove!! 
+          console.log('eljut ide');
+          const channel = message.member.voice.channel;
+          subcription = new MusicSubscription(
+            joinVoiceChannel({
+              channelId: channel.id,
+              guildId: channel.guild.id,
+              adapterCreator: channel.guild.voiceAdapterCreator,
+            })
+          );
+          subcription.voiceConnection.on("error", console.error);
+          subcriptions.set(message.guildId, subcription);
+        }
+
+        if (!subcriptions.has(message.guildId)) {
+          message.channel.send({
+            embeds: [
+              new Discord.MessageEmbed()
+                .setColor("RED")
+                .setDescription("Join a voice channel and try again!"),
+            ],
+          });
+          return;
+        }
+
+        try {
+          await entersState(
+            subcription.voiceConnection,
+            VoiceConnectionStatus.Ready,
+            10e3
+          );
+        } catch (error) {
+          console.error(error);
+          message.channel.send({
+            embeds: [
+              new Discord.MessageEmbed()
+                .setColor("RED")
+                .setDescription("Failed to join a voice channel!"),
+            ],
+          });
+          subcriptions.delete(message.guildId);
+          return;
+        }
+
+        try {
+          const track = await Track.from(url, {
+            onStart() {
+              message.channel.send({
+                embeds: [
+                  new Discord.MessageEmbed()
+                    .setColor("GREEN")
+                    .setDescription("Now Playing!"),
+                ],
+              });
+            },
+            onFinish() {
+              message.channel.send({
+                embeds: [
+                  new Discord.MessageEmbed()
+                    .setColor("GREEN")
+                    .setDescription("Finished playing!"),
+                ],
+              });
+            },
+            onError(error) {
+              message.channel.send({
+                embeds: [
+                  new Discord.MessageEmbed()
+                    .setColor("RED")
+                    .setDescription("Failed!"),
+                ],
+              });
+              console.error(error);
+            },
+          });
+
+          subscription.enqueue(track);
+        } catch (error) {
+          console.error(error);
+        }
+        break;
+      case "skip":
+        // let subscription = subcriptions.get(message.guildId);
+        if (subscription) {
+          subscription.audioPlayer.stop();
+          message.channel.send({
+            embeds: [
+              new Discord.MessageEmbed()
+                .setColor("GREEN")
+                .setDescription("Skipped song!"),
+            ],
+          });
+        } else {
+          message.channel.send({
+            embeds: [
+              new Discord.MessageEmbed()
+                .setColor("GREEN")
+                .setDescription("Not playing on this server!"),
+            ],
+          });
+        }
+        break;
+      case "leave":
+        // let subscription = subcriptions.get(message.guildId);
+        if (subscription) {
+          subscription.voiceConnection.destroy();
+          subcriptions.delete(message.guildId);
+          message.channel.send({
+            embeds: [
+              new Discord.MessageEmbed()
+                .setColor("GREEN")
+                .setDescription("Skipped song!"),
+            ],
+          });
+        } else {
+          message.channel.send({
+            embeds: [
+              new Discord.MessageEmbed()
+                .setColor("RED")
+                .setDescription("Not in this server!"),
+            ],
+          });
         }
         break;
       default:
