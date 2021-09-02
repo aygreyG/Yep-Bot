@@ -55,8 +55,9 @@ class MusicBot {
           embeds: [
             new Discord.MessageEmbed()
               .setColor("DARK_VIVID_PINK")
-              .setDescription(
-                `Now playing: ${this.audioPlayer.state.resource.metadata.title}`
+              .addField(
+                "Now playing: ",
+                `[${this.audioPlayer.state.resource.metadata.title}](${this.audioPlayer.state.resource.metadata.url})`
               ),
           ],
         });
@@ -219,6 +220,14 @@ class MusicBot {
         ],
       });
     }
+  }
+
+  pause() {
+    this.audioPlayer.pause(true);
+  }
+
+  resume() {
+    this.audioPlayer.unpause();
   }
 }
 
