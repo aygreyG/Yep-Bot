@@ -4,7 +4,7 @@ const blackjack = require("./blackjack");
 const coinflip = require("./coinflip");
 const { oneVOne } = require("./1v1");
 const { Users } = require("./dbObjects");
-
+const { MusicBot } = require("./music");
 const {
   AudioPlayerStatus,
   AudioResource,
@@ -12,13 +12,9 @@ const {
   joinVoiceChannel,
   VoiceConnectionStatus,
 } = require("@discordjs/voice");
+const { promisify } = require("util");
 
-const { Track } = require("./track.js");
-const { MusicSubscription } = require("./subs.js");
-
-// import { Track } from "./track";
-// import { MusicSubscription } from "./subs";
-
+const wait = promisify(setTimeout);
 const currency = new Discord.Collection();
 const client = new Discord.Client({
   intents: [
@@ -26,6 +22,8 @@ const client = new Discord.Client({
     Discord.Intents.FLAGS.GUILD_MESSAGES,
     Discord.Intents.FLAGS.GUILD_MEMBERS,
     Discord.Intents.FLAGS.GUILD_MESSAGE_REACTIONS,
+    Discord.Intents.FLAGS.GUILD_VOICE_STATES,
+    Discord.Intents.FLAGS.GUILD_INTEGRATIONS,
   ],
 });
 
@@ -201,7 +199,7 @@ client.on("messageCreate", async (message) => {
       default:
     }
   } else {
-    let subscription = subcriptions.get(message.guildId);
+    let musicBot = subcriptions.get(message.guildId);
     switch (command) {
       case "1v1":
         if (args[0] !== undefined && message.mentions.users.size) {
@@ -333,25 +331,16 @@ client.on("messageCreate", async (message) => {
       case "play":
       case "p":
         const url = args[0];
-        // console.log(message.member.voice.channel);
 
         if (
-          !subcriptions.has(message.guildId) &&
+          !musicBot &&
           message.member.voice.channel &&
           message.member instanceof Discord.GuildMember
         ) {
-          // TODO: remove!! 
-          console.log('eljut ide');
           const channel = message.member.voice.channel;
-          subcription = new MusicSubscription(
-            joinVoiceChannel({
-              channelId: channel.id,
-              guildId: channel.guild.id,
-              adapterCreator: channel.guild.voiceAdapterCreator,
-            })
-          );
-          subcription.voiceConnection.on("error", console.error);
-          subcriptions.set(message.guildId, subcription);
+          musicBot = new MusicBot(channel, message.channel);
+          subcriptions.set(message.guildId, musicBot);
+          console.log(`New bot set to guild: ${message.guildId}!`);
         }
 
         if (!subcriptions.has(message.guildId)) {
@@ -365,95 +354,34 @@ client.on("messageCreate", async (message) => {
           return;
         }
 
-        try {
-          await entersState(
-            subcription.voiceConnection,
-            VoiceConnectionStatus.Ready,
-            10e3
-          );
-        } catch (error) {
-          console.error(error);
-          message.channel.send({
-            embeds: [
-              new Discord.MessageEmbed()
-                .setColor("RED")
-                .setDescription("Failed to join a voice channel!"),
-            ],
-          });
-          subcriptions.delete(message.guildId);
-          return;
+        if (url) {
+          musicBot.play(url);
         }
 
-        try {
-          const track = await Track.from(url, {
-            onStart() {
-              message.channel.send({
-                embeds: [
-                  new Discord.MessageEmbed()
-                    .setColor("GREEN")
-                    .setDescription("Now Playing!"),
-                ],
-              });
-            },
-            onFinish() {
-              message.channel.send({
-                embeds: [
-                  new Discord.MessageEmbed()
-                    .setColor("GREEN")
-                    .setDescription("Finished playing!"),
-                ],
-              });
-            },
-            onError(error) {
-              message.channel.send({
-                embeds: [
-                  new Discord.MessageEmbed()
-                    .setColor("RED")
-                    .setDescription("Failed!"),
-                ],
-              });
-              console.error(error);
-            },
-          });
-
-          subscription.enqueue(track);
-        } catch (error) {
-          console.error(error);
-        }
         break;
       case "skip":
-        // let subscription = subcriptions.get(message.guildId);
-        if (subscription) {
-          subscription.audioPlayer.stop();
-          message.channel.send({
-            embeds: [
-              new Discord.MessageEmbed()
-                .setColor("GREEN")
-                .setDescription("Skipped song!"),
-            ],
-          });
-        } else {
-          message.channel.send({
-            embeds: [
-              new Discord.MessageEmbed()
-                .setColor("GREEN")
-                .setDescription("Not playing on this server!"),
-            ],
-          });
+        if (musicBot) {
+          musicBot.skip();
         }
+        break;
+      case "stop":
+        if (musicBot) musicBot.stop();
         break;
       case "leave":
         // let subscription = subcriptions.get(message.guildId);
-        if (subscription) {
-          subscription.voiceConnection.destroy();
+        if (musicBot) {
+          musicBot.leave();
           subcriptions.delete(message.guildId);
-          message.channel.send({
+          
+          const leftemb = await message.channel.send({
             embeds: [
               new Discord.MessageEmbed()
                 .setColor("GREEN")
-                .setDescription("Skipped song!"),
+                .setDescription("Left the channel!"),
             ],
           });
+          await wait(2000);
+          leftemb.delete().catch(console.error);
         } else {
           message.channel.send({
             embeds: [

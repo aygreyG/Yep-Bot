@@ -17,4 +17,4 @@ Meméne?
 
 - Youtube stuff:
     - ytdl-core
-    - youtube-dl-exec
+    - youtube-dl-exec (not necessary, but it is here for fallback)
