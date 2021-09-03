@@ -129,19 +129,26 @@ class MusicBot {
     }
   }
 
+//TODO: managing livestreams and debugging the random stops in resources
   async play(url) {
-    const info = await getInfo(url);
+    try {
+      const info = await getInfo(url);
 
-    if (info) {
-      const stuff = ytdl(url, { filter: "audioonly" });
-      const rs = createAudioResource(stuff, {
-        metadata: {
-          title: info.videoDetails.title,
-          url: url,
-        },
-      });
-      this.enqueue(rs);
+      if (info) {
+        const stuff = ytdl(url, { filter: "audioonly", quality: "highestaudio" });
+        const rs = createAudioResource(stuff, {
+          metadata: {
+            title: info.videoDetails.title,
+            url: url,
+          },
+        });
+        this.enqueue(rs);
+      }
+    } catch (e) {
+      this.mchannel.send({embeds: [new Discord.MessageEmbed().setColor('RED').setDescription('Couldn\'t find video!')]});
+      console.error('no video found');
     }
+    
 
     // if (info) {
     //   const process = raw(
