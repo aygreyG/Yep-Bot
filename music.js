@@ -18,6 +18,14 @@ const ytdl = require("ytdl-core");
 // this can be used if needed
 const { raw } = require("youtube-dl-exec");
 
+class Track {
+  constructor(url, title, thumb) {
+    this.url = url;
+    this.title = title;
+    this.thumb = thumb;
+  }
+}
+
 class MusicBot {
   constructor(channel, mchannel) {
     this.connection = joinVoiceChannel({
@@ -33,6 +41,8 @@ class MusicBot {
       },
     });
     this.queue = [];
+    this.autoplay = false;
+    // console.log(this.autoplay);
 
     // this.connection.on('stateChange', (oldState, newState) => {
     //   console.log(`Connection transitioned from ${oldState.status} to ${newState.status}`);
@@ -47,20 +57,70 @@ class MusicBot {
       console.error(error);
     });
 
-    this.audioPlayer.on(AudioPlayerStatus.Idle, () => {
-      const play = this.queue.shift();
-      if (play) {
-        this.audioPlayer.play(play);
-        this.mchannel.send({
-          embeds: [
-            new Discord.MessageEmbed()
-              .setColor("DARK_VIVID_PINK")
-              .addField(
-                "Now playing: ",
-                `[${this.audioPlayer.state.resource.metadata.title}](${this.audioPlayer.state.resource.metadata.url})`
-              ),
-          ],
-        });
+    this.audioPlayer.on(AudioPlayerStatus.Idle, async () => {
+      // info.related_videos
+      // if (this.autoplay) {
+      //   const info = await getInfo(play);
+      //   if (info.related_videos[0]) {
+      //     console.log(info.related_videos[])
+      //   }
+      // }
+    });
+
+    this.audioPlayer.on("stateChange", async (oldState, newState) => {
+      if (newState.status == AudioPlayerStatus.Idle) {
+        const play = this.queue.shift();
+        if (play) {
+          const stuff = ytdl(play.url, { filter: "audioonly", highWaterMark: 1<<26, dlChunkSize: 1<<25 });
+          const rs = createAudioResource(stuff, {
+            metadata: {
+              title: play.title,
+              url: play.url,
+            },
+          });
+          this.audioPlayer.play(rs);
+          this.mchannel.send({
+            embeds: [
+              new Discord.MessageEmbed()
+                .setColor("DARK_VIVID_PINK")
+                .setThumbnail(play.thumb)
+                .addField("Now playing: ", `[${play.title}](${play.url})`),
+            ],
+          });
+        } else if (this.autoplay) {
+          if (oldState.status == AudioPlayerStatus.Playing) {
+            const info = await getInfo(oldState.resource.metadata.url);
+            let rand = Math.floor(Math.random() * 10);
+            let maxtry = 15;
+            while (info.related_videos[rand].title.toLowerCase().includes('live') && maxtry != 0) {
+              rand = Math.floor(Math.random() * 10);
+              maxtry--;
+            }
+            const track = new Track(
+              "https://www.youtube.com/watch?v=" + info.related_videos[rand].id,
+              info.related_videos[rand].title,
+              info.related_videos[rand].thumbnails[
+                info.related_videos[rand].thumbnails.length - 1
+              ].url
+            );
+            const stuff2 = ytdl(track.url, { filter: "audioonly" });
+            const rs2 = createAudioResource(stuff2, {
+              metadata: {
+                title: track.title,
+                url: track.url,
+              },
+            });
+            this.audioPlayer.play(rs2);
+            this.mchannel.send({
+              embeds: [
+                new Discord.MessageEmbed()
+                  .setColor("DARK_VIVID_PINK")
+                  .setThumbnail(track.thumb)
+                  .addField("Now playing: ", `[${track.title}](${track.url})`),
+              ],
+            });
+          }
+        }
       }
     });
 
@@ -93,34 +153,44 @@ class MusicBot {
     );
   }
 
-  enqueue(resource) {
+  enqueue(track) {
+    // const stuff = ytdl(url, { filter: "audioonly" });
+    // const rs = createAudioResource(stuff, {
+    //   metadata: {
+    //     title: info.videoDetails.title,
+    //     url: url,
+    //   },
+    // });
     if (
       this.queue.length > 0 ||
       this.audioPlayer.state.status == AudioPlayerStatus.Playing
     ) {
       // console.log('The audio player has queued a song');
-      this.queue.push(resource);
+      this.queue.push(track);
       this.mchannel.send({
         embeds: [
           new Discord.MessageEmbed()
             .setColor("DARK_BUT_NOT_BLACK")
-            .addField(
-              "Queued: ",
-              `[${resource.metadata.title}](${resource.metadata.url})`
-            ),
+            .setThumbnail(track.thumb)
+            .addField("Queued: ", `[${track.title}](${track.url})`),
         ],
       });
     } else {
       // console.log('The audio player attemted to start a song');
+      const stuff = ytdl(track.url, { filter: "audioonly" });
+      const resource = createAudioResource(stuff, {
+        metadata: {
+          title: track.title,
+          url: track.url,
+        },
+      });
       this.audioPlayer.play(resource);
       this.mchannel.send({
         embeds: [
           new Discord.MessageEmbed()
             .setColor("DARK_VIVID_PINK")
-            .addField(
-              "Now playing: ",
-              `[${this.audioPlayer.state.resource.metadata.title}](${this.audioPlayer.state.resource.metadata.url})`
-            ),
+            .setThumbnail(track.thumb)
+            .addField("Now playing: ", `[${track.title}](${track.url})`),
           // .setDescription(
           //   `Now playing: \`${this.audioPlayer.state.resource.metadata.title}\``
           // ),
@@ -133,14 +203,24 @@ class MusicBot {
     const info = await getInfo(url);
 
     if (info) {
-      const stuff = ytdl(url, { filter: "audioonly" });
-      const rs = createAudioResource(stuff, {
-        metadata: {
-          title: info.videoDetails.title,
-          url: url,
-        },
-      });
-      this.enqueue(rs);
+      if (info.videoDetails.isLiveContent) {
+        this.mchannel.send({
+          embeds: [
+            new Discord.MessageEmbed()
+              .setColor("RED")
+              .setDescription("Live content is not implemented yet!"),
+          ],
+        });
+        return;
+      }
+      const track = new Track(
+        url,
+        info.videoDetails.title,
+        info.videoDetails.thumbnails[
+          info.videoDetails.thumbnails.length - 1
+        ].url
+      );
+      this.enqueue(track);
     }
 
     // if (info) {
@@ -192,12 +272,32 @@ class MusicBot {
   }
 
   leave() {
+    this.autoplay = false;
     this.audioPlayer.stop(true);
     this.connection.destroy();
   }
 
+  async autoPlay() {
+    // console.log(this.autoplay);
+    this.autoplay = !this.autoplay;
+    this.mchannel.send({
+      embeds: [
+        new Discord.MessageEmbed()
+          .setColor("DARK_GREEN")
+          .setDescription(
+            this.autoplay ? "Autoplay is on!" : "Autoplay is off!"
+          ),
+      ],
+    });
+    // if (this.audioPlayer.state.status === AudioPlayerStatus.Playing && this.autoplay) {
+    //   const info = await getInfo(this.audioPlayer.state.resource.metadata.url);
+    //   const track = new Track("https://www.youtube.com/watch?v=" + info.related_videos[0].id, info.related_videos[0].title, info.related_videos[0].thumbnails[info.related_videos[0].thumbnails.length-1]);
+    //   this.enqueue(track);
+    // }
+  }
+
   skip() {
-    if (this.queue.length === 0) {
+    if (this.queue.length === 0 && !this.autoplay) {
       this.audioPlayer.stop(true);
       this.mchannel.send({
         embeds: [
@@ -207,18 +307,17 @@ class MusicBot {
         ],
       });
     } else {
-      const resource = this.queue.shift();
-      this.audioPlayer.play(resource);
-      this.mchannel.send({
-        embeds: [
-          new Discord.MessageEmbed()
-            .setColor("DARK_GOLD")
-            .addField(
-              "Skipped and now playing: ",
-              `[${this.audioPlayer.state.resource.metadata.title}](${this.audioPlayer.state.resource.metadata.url})`
-            ),
-        ],
-      });
+      this.audioPlayer.stop(true);
+      // this.mchannel.send({
+      //   embeds: [
+      //     new Discord.MessageEmbed()
+      //       .setColor("DARK_GOLD")
+      //       .addField(
+      //         "Skipped and now playing: ",
+      //         `[${this.audioPlayer.state.resource.metadata.title}](${this.audioPlayer.state.resource.metadata.url})`
+      //       ),
+      //   ],
+      // });
     }
   }
 
@@ -228,6 +327,25 @@ class MusicBot {
 
   resume() {
     this.audioPlayer.unpause();
+  }
+
+  async queuePrint() {
+    if (this.queue.length === 0) {
+      const embed = new Discord.MessageEmbed()
+        .setColor("RED")
+        .setDescription("The queue is empty!");
+      this.mchannel.send({ embeds: [embed] });
+    } else {
+      const embed = new Discord.MessageEmbed()
+        .setColor("WHITE")
+        .setDescription("The queue is:");
+      let queueNum = 1;
+      this.queue.forEach((track) => {
+        embed.addField(queueNum.toString(), `[${track.title}](${track.url})`);
+        queueNum++;
+      });
+      this.mchannel.send({ embeds: [embed] });
+    }
   }
 }
 

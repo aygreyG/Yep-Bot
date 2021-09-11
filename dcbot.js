@@ -123,7 +123,7 @@ client.once("ready", async () => {
   console.log("I'm ready!" + ` Logged in as '${client.user.tag}'`);
 });
 
-// Key: Discord.Snowflake, Value: MusicSubscription
+// Key: guildId, Value: MusicBot
 const subcriptions = new Map();
 
 client.on("messageCreate", async (message) => {
@@ -340,7 +340,7 @@ client.on("messageCreate", async (message) => {
           const channel = message.member.voice.channel;
           musicBot = new MusicBot(channel, message.channel);
           subcriptions.set(message.guildId, musicBot);
-          console.log(`New bot set to guild: ${message.guildId}!`);
+          console.log(`New musicbot set to guild: ${message.guildId}!`);
         }
 
         if (!subcriptions.has(message.guildId)) {
@@ -366,6 +366,12 @@ client.on("messageCreate", async (message) => {
         break;
       case "stop":
         if (musicBot) musicBot.stop();
+        break;
+      case "queue":
+        if (musicBot) musicBot.queuePrint();
+        break;
+      case "autoplay":
+        if (musicBot) musicBot.autoPlay();
         break;
       case "leave":
         // let subscription = subcriptions.get(message.guildId);
@@ -393,6 +399,17 @@ client.on("messageCreate", async (message) => {
         }
         break;
       default:
+    }
+  }
+});
+
+client.on('voiceStateUpdate', (oldState, newState) => {
+  if (newState.channel == null) {
+    if (oldState.channel.members.size == 1) {
+      if (oldState.channel.members.first().id == client.user.id) {
+        const musicBot = subcriptions.get(oldState.guild.id);
+        musicBot.leave();
+      }
     }
   }
 });
