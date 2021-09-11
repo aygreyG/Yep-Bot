@@ -199,6 +199,7 @@ client.on("messageCreate", async (message) => {
       default:
     }
   } else {
+    client.user.setActivity(`${prefix}help`, { type: "LISTENING" });
     let musicBot = subcriptions.get(message.guildId);
     switch (command) {
       case "1v1":

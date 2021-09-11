@@ -71,7 +71,11 @@ class MusicBot {
       if (newState.status == AudioPlayerStatus.Idle) {
         const play = this.queue.shift();
         if (play) {
-          const stuff = ytdl(play.url, { filter: "audioonly", highWaterMark: 1<<26, dlChunkSize: 1<<25 });
+          const stuff = ytdl(play.url, {
+            filter: "audioonly",
+            highWaterMark: 1 << 26,
+            dlChunkSize: 1 << 25,
+          });
           const rs = createAudioResource(stuff, {
             metadata: {
               title: play.title,
@@ -92,7 +96,10 @@ class MusicBot {
             const info = await getInfo(oldState.resource.metadata.url);
             let rand = Math.floor(Math.random() * 10);
             let maxtry = 15;
-            while (info.related_videos[rand].title.toLowerCase().includes('live') && maxtry != 0) {
+            while (
+              info.related_videos[rand].title.toLowerCase().includes("live") &&
+              maxtry != 0
+            ) {
               rand = Math.floor(Math.random() * 10);
               maxtry--;
             }
@@ -199,28 +206,40 @@ class MusicBot {
     }
   }
 
+  //TODO: managing livestreams and debugging the random stops in resources
   async play(url) {
-    const info = await getInfo(url);
+    try {
+      const info = await getInfo(url);
 
-    if (info) {
-      if (info.videoDetails.isLiveContent) {
-        this.mchannel.send({
-          embeds: [
-            new Discord.MessageEmbed()
-              .setColor("RED")
-              .setDescription("Live content is not implemented yet!"),
-          ],
-        });
-        return;
+      if (info) {
+        if (info.videoDetails.isLiveContent) {
+          this.mchannel.send({
+            embeds: [
+              new Discord.MessageEmbed()
+                .setColor("RED")
+                .setDescription("Live content is not implemented yet!"),
+            ],
+          });
+          return;
+        }
+        const track = new Track(
+          url,
+          info.videoDetails.title,
+          info.videoDetails.thumbnails[
+            info.videoDetails.thumbnails.length - 1
+          ].url
+        );
+        this.enqueue(track);
       }
-      const track = new Track(
-        url,
-        info.videoDetails.title,
-        info.videoDetails.thumbnails[
-          info.videoDetails.thumbnails.length - 1
-        ].url
-      );
-      this.enqueue(track);
+    } catch (e) {
+      this.mchannel.send({
+        embeds: [
+          new Discord.MessageEmbed()
+            .setColor("RED")
+            .setDescription("Couldn't find video!"),
+        ],
+      });
+      console.error("no video found");
     }
 
     // if (info) {
