@@ -15,9 +15,13 @@ const {
 const Discord = require("discord.js");
 const { getInfo } = require("ytdl-core");
 const ytdl = require("ytdl-core");
-// this can be used if needed
+// this is used instead of ytdl because it may be more reliable
 const { raw } = require("youtube-dl-exec");
 
+/**
+ * Class of the Track implementation.
+ * It stores the url, title and thumbnail of the video.
+ */
 class Track {
   constructor(url, title, thumb) {
     this.url = url;
@@ -26,8 +30,19 @@ class Track {
   }
 }
 
+/**
+ * Class of the musicBot implementation.
+ * This includes all the methods that are needed, (play, stop, pause... etc).
+ *
+ */
 class MusicBot {
+  /**
+   * Creates a new MusicBot.
+   * @param {Discord.VoiceChannel} channel 
+   * @param {Discord.TextBasedChannels} mchannel 
+   */
   constructor(channel, mchannel) {
+    // Automatically joins the voice channel on creation
     this.connection = joinVoiceChannel({
       channelId: channel.id,
       guildId: channel.guild.id,
@@ -35,19 +50,21 @@ class MusicBot {
     });
     this.mchannel = mchannel;
     this.channel = channel;
+    // creates a new audio player for itself
     this.audioPlayer = createAudioPlayer({
       behaviors: {
         noSubscriber: NoSubscriberBehavior.Pause,
       },
     });
+    // This queue contains all the unused tracks
     this.queue = [];
     this.autoplay = false;
-    // console.log(this.autoplay);
 
     // this.connection.on('stateChange', (oldState, newState) => {
     //   console.log(`Connection transitioned from ${oldState.status} to ${newState.status}`);
     // });
 
+    // When the connection is ready it subscribes to the audioplayer
     this.connection.on(VoiceConnectionStatus.Ready, () => {
       // console.log("Connected to audioPlayer");
       this.connection.subscribe(this.audioPlayer);
@@ -57,66 +74,13 @@ class MusicBot {
       console.error(error);
     });
 
-    this.audioPlayer.on(AudioPlayerStatus.Idle, async () => {
-      // info.related_videos
-      // if (this.autoplay) {
-      //   const info = await getInfo(play);
-      //   if (info.related_videos[0]) {
-      //     console.log(info.related_videos[])
-      //   }
-      // }
-    });
-
+    // This is responsible for autoplay and playing the next song in the queue
     this.audioPlayer.on("stateChange", async (oldState, newState) => {
       if (newState.status == AudioPlayerStatus.Idle) {
         const play = this.queue.shift();
         if (play) {
-          // const stuff = ytdl(play.url, {
-          //   filter: "audioonly",
-          //   highWaterMark: 1 << 26,
-          //   dlChunkSize: 1 << 25,
-          // });
-          // const rs = createAudioResource(stuff, {
-          //   metadata: {
-          //     title: play.title,
-          //     url: play.url,
-          //   },
-          // });
-          // this.audioPlayer.play(rs);
-          const process = raw(
-            play.url,
-            {
-              o: "-",
-              q: "",
-              f: "bestaudio[ext=webm+acodec=opus+asr=48000]/bestaudio",
-              r: "100K",
-            },
-            { stdio: ["ignore", "pipe", "ignore"] }
-          );
-          if (!process.stdout) {
-            console.error("No stdout");
-            return;
-          }
-          const stream = process.stdout;
-          process
-            .once("spawn", () => {
-              demuxProbe(stream)
-                .then((probe) => {
-                  const resource = createAudioResource(probe.stream, {
-                    metadata: {
-                      title: play.title,
-                      url: play.url,
-                      thumb: play.thumb,
-                    },
-                    inputType: probe.type,
-                  });
-                  this.audioPlayer.play(resource);
-                })
-                .catch(error => {
-                  console.error('Error in getting resource: ' + error);
-                });
-            })
-            .catch(error => console.error('Error in stream process(prob skipped or stopped)'));
+          this.playTrack(play);
+
           this.mchannel.send({
             embeds: [
               new Discord.MessageEmbed()
@@ -126,13 +90,17 @@ class MusicBot {
             ],
           });
         } else if (this.autoplay) {
+          // if it was playing and there is no more song in the queue,
+          // then it gets the last song's related_videos and creates a new track
+          // (tries 15 times to find a track from the first 6 videos
+          //  that is less than 15 mins long and is not a live version)
           if (oldState.status == AudioPlayerStatus.Playing) {
             const info = await getInfo(oldState.resource.metadata.url);
             let rand = Math.floor(Math.random() * 5);
             let maxtry = 15;
             while (
-              (info.related_videos[rand].title.toLowerCase().includes("live") || 
-              info.related_videos[rand].length_seconds > 900 ) &&
+              (info.related_videos[rand].title.toLowerCase().includes("live") ||
+                info.related_videos[rand].length_seconds > 900) &&
               maxtry != 0
             ) {
               rand = Math.floor(Math.random() * 5);
@@ -145,47 +113,9 @@ class MusicBot {
                 info.related_videos[rand].thumbnails.length - 1
               ].url
             );
-            // const stuff2 = ytdl(track.url, { filter: "audioonly" });
-            // const rs2 = createAudioResource(stuff2, {
-            //   metadata: {
-            //     title: track.title,
-            //     url: track.url,
-            //   },
-            // });
-            // this.audioPlayer.play(rs2);
-            const process = raw(
-              track.url,
-              {
-                o: "-",
-                q: "",
-                f: "bestaudio[ext=webm+acodec=opus+asr=48000]/bestaudio",
-                r: "100K",
-              },
-              { stdio: ["ignore", "pipe", "ignore"] }
-            );
-            if (!process.stdout) {
-              console.error("No stdout");
-              return;
-            }
-            const stream = process.stdout;
-            process
-              .once("spawn", () => {
-                demuxProbe(stream)
-                  .then((probe) => {
-                    const resource = createAudioResource(probe.stream, {
-                      metadata: {
-                        title: track.title,
-                        url: track.url,
-                        thumb: track.thumb,
-                      },
-                      inputType: probe.type,
-                    });
-                    this.audioPlayer.play(resource);
-                  })
-                  .catch(error => console.error('Error in getting resource: ' + error));
-              })
-              .catch(error => console.error('Error in stream process(prob skipped or stopped)'));
-            
+
+            this.playTrack(track);
+
             this.mchannel.send({
               embeds: [
                 new Discord.MessageEmbed()
@@ -203,6 +133,7 @@ class MusicBot {
     //   console.log('The audio player has started playing!');
     // });
 
+    // if it disconnects it checks if it might have been because of a channel change
     this.connection.on(
       VoiceConnectionStatus.Disconnected,
       async (oldState, newState) => {
@@ -228,14 +159,11 @@ class MusicBot {
     );
   }
 
+  /**
+   * It queues or plays the track depending on the state of the queue.
+   * @param {Track} track The track that needs to be queued.
+   */
   enqueue(track) {
-    // const stuff = ytdl(url, { filter: "audioonly" });
-    // const rs = createAudioResource(stuff, {
-    //   metadata: {
-    //     title: info.videoDetails.title,
-    //     url: url,
-    //   },
-    // });
     if (
       this.queue.length > 0 ||
       this.audioPlayer.state.status == AudioPlayerStatus.Playing
@@ -251,48 +179,7 @@ class MusicBot {
         ],
       });
     } else {
-      // console.log('The audio player attemted to start a song');
-      // const stuff = ytdl(track.url, { filter: "audioonly" });
-      // const resource = createAudioResource(stuff, {
-      //   metadata: {
-      //     title: track.title,
-      //     url: track.url,
-      //   },
-      // });
-      
-      const process = raw(
-        track.url,
-        {
-          o: "-",
-          q: "",
-          f: "bestaudio[ext=webm+acodec=opus+asr=48000]/bestaudio",
-          r: "100K",
-        },
-        { stdio: ["ignore", "pipe", "ignore"] }
-      );
-      if (!process.stdout) {
-        console.error("No stdout");
-        return;
-      }
-      const stream = process.stdout;
-      process
-        .once("spawn", () => {
-          demuxProbe(stream)
-            .then((probe) => {
-              const resource = createAudioResource(probe.stream, {
-                metadata: {
-                  title: track.title,
-                  url: track.url,
-                  thumb: track.thumb,
-                },
-                inputType: probe.type,
-              });
-              this.audioPlayer.play(resource);
-            })
-            .catch(console.error);
-        })
-        .catch(error => console.error('Error in stream process(prob skipped or stopped)'));
-      
+      this.playTrack(track);
 
       this.mchannel.send({
         embeds: [
@@ -300,14 +187,58 @@ class MusicBot {
             .setColor("DARK_VIVID_PINK")
             .setThumbnail(track.thumb)
             .addField("Now playing: ", `[${track.title}](${track.url})`),
-          // .setDescription(
-          //   `Now playing: \`${this.audioPlayer.state.resource.metadata.title}\``
-          // ),
         ],
       });
     }
   }
 
+  /**
+   * Makes a resource from the track and plays it.
+   * @param {Track} track 
+   * @returns If it can't play the song.
+   */
+  playTrack(track) {
+    const process = raw(
+      track.url,
+      {
+        o: "-",
+        q: "",
+        f: "bestaudio[ext=webm+acodec=opus+asr=48000]/bestaudio",
+        r: "100K",
+      },
+      { stdio: ["ignore", "pipe", "ignore"] }
+    );
+    if (!process.stdout) {
+      console.error("No stdout");
+      return;
+    }
+    const stream = process.stdout;
+    process
+      .once("spawn", () => {
+        demuxProbe(stream)
+          .then((probe) => {
+            const resource = createAudioResource(probe.stream, {
+              metadata: {
+                title: track.title,
+                url: track.url,
+                thumb: track.thumb,
+              },
+              inputType: probe.type,
+            });
+            this.audioPlayer.play(resource);
+          })
+          .catch(console.error);
+      })
+      .catch((error) =>
+        console.error("Error in stream process(prob skipped or stopped)")
+      );
+  }
+
+  /**
+   * Gets info about the given url and if it is playable then tries to queues it.
+   * @param {String} url The URL of the video that needs to be played.
+   * @returns If the url is not playable.
+   */
   async play(url) {
     try {
       const info = await getInfo(url);
@@ -342,43 +273,11 @@ class MusicBot {
       });
       console.error("no video found");
     }
-
-    // if (info) {
-    //   const process = raw(
-    //     url,
-    //     {
-    //       o: "-",
-    //       q: "",
-    //       f: "bestaudio[ext=webm+acodec=opus+asr=48000]/bestaudio",
-    //       r: "100K",
-    //     },
-    //     { stdio: ["ignore", "pipe", "ignore"] }
-    //   );
-    //   if (!process.stdout) {
-    //     console.error("No stdout");
-    //     return false;
-    //   }
-    //   const stream = process.stdout;
-    //   process
-    //     .once("spawn", () => {
-    //       demuxProbe(stream)
-    //         .then((probe) => {
-    //           const resource = createAudioResource(probe.stream, {
-    //             metadata: {
-    //               title: info.videoDetails.title,
-    //             },
-    //             inputType: probe.type,
-    //           });
-    //           this.enqueue(resource);
-    //         }
-    //         )
-    //         .catch(console.error);
-    //     })
-    //     .catch(error => console.error('Error in stream process(prob skipped or stopped)'));
-    //   return true;
-    // } else return false;
   }
 
+  /**
+   * Stops the playback, clears the queue and turns off autoplay.
+   */
   stop() {
     this.autoplay = false;
     this.queue = [];
@@ -392,12 +291,18 @@ class MusicBot {
     });
   }
 
+  /**
+   * Destroys the musicbot.
+   */
   leave() {
     this.autoplay = false;
     this.audioPlayer.stop(true);
     this.connection.destroy();
   }
 
+  /**
+   * Turns on or off autoplay.
+   */
   async autoPlay() {
     // console.log(this.autoplay);
     this.autoplay = !this.autoplay;
@@ -410,13 +315,11 @@ class MusicBot {
           ),
       ],
     });
-    // if (this.audioPlayer.state.status === AudioPlayerStatus.Playing && this.autoplay) {
-    //   const info = await getInfo(this.audioPlayer.state.resource.metadata.url);
-    //   const track = new Track("https://www.youtube.com/watch?v=" + info.related_videos[0].id, info.related_videos[0].title, info.related_videos[0].thumbnails[info.related_videos[0].thumbnails.length-1]);
-    //   this.enqueue(track);
-    // }
   }
 
+  /**
+   * Skips or stops the playback depending on the state of the queue.
+   */
   skip() {
     if (this.queue.length === 0 && !this.autoplay) {
       this.audioPlayer.stop(true);
@@ -429,16 +332,6 @@ class MusicBot {
       });
     } else {
       this.audioPlayer.stop(true);
-      // this.mchannel.send({
-      //   embeds: [
-      //     new Discord.MessageEmbed()
-      //       .setColor("DARK_GOLD")
-      //       .addField(
-      //         "Skipped and now playing: ",
-      //         `[${this.audioPlayer.state.resource.metadata.title}](${this.audioPlayer.state.resource.metadata.url})`
-      //       ),
-      //   ],
-      // });
     }
   }
 
@@ -450,6 +343,9 @@ class MusicBot {
     this.audioPlayer.unpause();
   }
 
+  /**
+   * Sends an embed which contains the queue to the assigned message channel.
+   */
   async queuePrint() {
     if (this.queue.length === 0) {
       const embed = new Discord.MessageEmbed()
