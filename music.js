@@ -71,18 +71,52 @@ class MusicBot {
       if (newState.status == AudioPlayerStatus.Idle) {
         const play = this.queue.shift();
         if (play) {
-          const stuff = ytdl(play.url, {
-            filter: "audioonly",
-            highWaterMark: 1 << 26,
-            dlChunkSize: 1 << 25,
-          });
-          const rs = createAudioResource(stuff, {
-            metadata: {
-              title: play.title,
-              url: play.url,
+          // const stuff = ytdl(play.url, {
+          //   filter: "audioonly",
+          //   highWaterMark: 1 << 26,
+          //   dlChunkSize: 1 << 25,
+          // });
+          // const rs = createAudioResource(stuff, {
+          //   metadata: {
+          //     title: play.title,
+          //     url: play.url,
+          //   },
+          // });
+          // this.audioPlayer.play(rs);
+          const process = raw(
+            play.url,
+            {
+              o: "-",
+              q: "",
+              f: "bestaudio[ext=webm+acodec=opus+asr=48000]/bestaudio",
+              r: "100K",
             },
-          });
-          this.audioPlayer.play(rs);
+            { stdio: ["ignore", "pipe", "ignore"] }
+          );
+          if (!process.stdout) {
+            console.error("No stdout");
+            return;
+          }
+          const stream = process.stdout;
+          process
+            .once("spawn", () => {
+              demuxProbe(stream)
+                .then((probe) => {
+                  const resource = createAudioResource(probe.stream, {
+                    metadata: {
+                      title: play.title,
+                      url: play.url,
+                      thumb: play.thumb,
+                    },
+                    inputType: probe.type,
+                  });
+                  this.audioPlayer.play(resource);
+                })
+                .catch(error => {
+                  console.error('Error in getting resource: ' + error);
+                });
+            })
+            .catch(error => console.error('Error in stream process(prob skipped or stopped)'));
           this.mchannel.send({
             embeds: [
               new Discord.MessageEmbed()
@@ -94,13 +128,14 @@ class MusicBot {
         } else if (this.autoplay) {
           if (oldState.status == AudioPlayerStatus.Playing) {
             const info = await getInfo(oldState.resource.metadata.url);
-            let rand = Math.floor(Math.random() * 10);
+            let rand = Math.floor(Math.random() * 5);
             let maxtry = 15;
             while (
-              info.related_videos[rand].title.toLowerCase().includes("live") &&
+              (info.related_videos[rand].title.toLowerCase().includes("live") || 
+              info.related_videos[rand].length_seconds > 900 ) &&
               maxtry != 0
             ) {
-              rand = Math.floor(Math.random() * 10);
+              rand = Math.floor(Math.random() * 5);
               maxtry--;
             }
             const track = new Track(
@@ -110,14 +145,47 @@ class MusicBot {
                 info.related_videos[rand].thumbnails.length - 1
               ].url
             );
-            const stuff2 = ytdl(track.url, { filter: "audioonly" });
-            const rs2 = createAudioResource(stuff2, {
-              metadata: {
-                title: track.title,
-                url: track.url,
+            // const stuff2 = ytdl(track.url, { filter: "audioonly" });
+            // const rs2 = createAudioResource(stuff2, {
+            //   metadata: {
+            //     title: track.title,
+            //     url: track.url,
+            //   },
+            // });
+            // this.audioPlayer.play(rs2);
+            const process = raw(
+              track.url,
+              {
+                o: "-",
+                q: "",
+                f: "bestaudio[ext=webm+acodec=opus+asr=48000]/bestaudio",
+                r: "100K",
               },
-            });
-            this.audioPlayer.play(rs2);
+              { stdio: ["ignore", "pipe", "ignore"] }
+            );
+            if (!process.stdout) {
+              console.error("No stdout");
+              return;
+            }
+            const stream = process.stdout;
+            process
+              .once("spawn", () => {
+                demuxProbe(stream)
+                  .then((probe) => {
+                    const resource = createAudioResource(probe.stream, {
+                      metadata: {
+                        title: track.title,
+                        url: track.url,
+                        thumb: track.thumb,
+                      },
+                      inputType: probe.type,
+                    });
+                    this.audioPlayer.play(resource);
+                  })
+                  .catch(error => console.error('Error in getting resource: ' + error));
+              })
+              .catch(error => console.error('Error in stream process(prob skipped or stopped)'));
+            
             this.mchannel.send({
               embeds: [
                 new Discord.MessageEmbed()
@@ -184,14 +252,48 @@ class MusicBot {
       });
     } else {
       // console.log('The audio player attemted to start a song');
-      const stuff = ytdl(track.url, { filter: "audioonly" });
-      const resource = createAudioResource(stuff, {
-        metadata: {
-          title: track.title,
-          url: track.url,
+      // const stuff = ytdl(track.url, { filter: "audioonly" });
+      // const resource = createAudioResource(stuff, {
+      //   metadata: {
+      //     title: track.title,
+      //     url: track.url,
+      //   },
+      // });
+      
+      const process = raw(
+        track.url,
+        {
+          o: "-",
+          q: "",
+          f: "bestaudio[ext=webm+acodec=opus+asr=48000]/bestaudio",
+          r: "100K",
         },
-      });
-      this.audioPlayer.play(resource);
+        { stdio: ["ignore", "pipe", "ignore"] }
+      );
+      if (!process.stdout) {
+        console.error("No stdout");
+        return;
+      }
+      const stream = process.stdout;
+      process
+        .once("spawn", () => {
+          demuxProbe(stream)
+            .then((probe) => {
+              const resource = createAudioResource(probe.stream, {
+                metadata: {
+                  title: track.title,
+                  url: track.url,
+                  thumb: track.thumb,
+                },
+                inputType: probe.type,
+              });
+              this.audioPlayer.play(resource);
+            })
+            .catch(console.error);
+        })
+        .catch(error => console.error('Error in stream process(prob skipped or stopped)'));
+      
+
       this.mchannel.send({
         embeds: [
           new Discord.MessageEmbed()
@@ -206,7 +308,6 @@ class MusicBot {
     }
   }
 
-  //TODO: managing livestreams and debugging the random stops in resources
   async play(url) {
     try {
       const info = await getInfo(url);
@@ -279,6 +380,7 @@ class MusicBot {
   }
 
   stop() {
+    this.autoplay = false;
     this.queue = [];
     this.audioPlayer.stop(true);
     this.mchannel.send({

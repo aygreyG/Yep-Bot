@@ -410,6 +410,7 @@ client.on('voiceStateUpdate', (oldState, newState) => {
       if (oldState.channel.members.first().id == client.user.id) {
         const musicBot = subcriptions.get(oldState.guild.id);
         musicBot.leave();
+        subcriptions.delete(oldState.guild.id);
       }
     }
   }
