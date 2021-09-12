@@ -379,7 +379,7 @@ client.on("messageCreate", async (message) => {
         if (musicBot) {
           musicBot.leave();
           subcriptions.delete(message.guildId);
-          
+
           const leftemb = await message.channel.send({
             embeds: [
               new Discord.MessageEmbed()
@@ -404,7 +404,7 @@ client.on("messageCreate", async (message) => {
   }
 });
 
-client.on('voiceStateUpdate', (oldState, newState) => {
+client.on("voiceStateUpdate", (oldState, newState) => {
   if (newState.channel == null) {
     if (oldState.channel.members.size == 1) {
       if (oldState.channel.members.first().id == client.user.id) {

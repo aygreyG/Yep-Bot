@@ -38,8 +38,8 @@ class Track {
 class MusicBot {
   /**
    * Creates a new MusicBot.
-   * @param {Discord.VoiceChannel} channel 
-   * @param {Discord.TextBasedChannels} mchannel 
+   * @param {Discord.VoiceChannel} channel
+   * @param {Discord.TextBasedChannels} mchannel
    */
   constructor(channel, mchannel) {
     // Automatically joins the voice channel on creation
@@ -194,7 +194,7 @@ class MusicBot {
 
   /**
    * Makes a resource from the track and plays it.
-   * @param {Track} track 
+   * @param {Track} track
    * @returns If it can't play the song.
    */
   playTrack(track) {
