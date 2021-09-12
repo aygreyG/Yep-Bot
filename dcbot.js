@@ -57,6 +57,40 @@ const helpEmbed = new Discord.MessageEmbed()
     {
       name: `${prefix}ping`,
       value: "🏓 Pings the bot, if it's available it will answer.",
+    },
+    {
+      name: `${prefix}p/${prefix}play <youtube url>`,
+      value:
+        "🎶 Joins your voice channel and plays the given youtube song. If there is already a song playing, it will be put in a queue.",
+    },
+    {
+      name: `${prefix}queue/${prefix}q`,
+      value: "📃 Shows you the queue.",
+    },
+    {
+      name: `${prefix}skip/${prefix}next`,
+      value:
+        "⏭ Skips the currently playing song, if there is no song in the queue and autoplay is enabled, plays a related song.",
+    },
+    {
+      name: `${prefix}autoplay`,
+      value: "🔀 It enables/disables autoplay.",
+    },
+    {
+      name: `${prefix}leave`,
+      value: "⏏ Stops playback and leaves the channel.",
+    },
+    {
+      name: `${prefix}pause`,
+      value: "⏸ Pauses the playback.",
+    },
+    {
+      name: `${prefix}resume`,
+      value: "▶ Resumes the playback.",
+    },
+    {
+      name: `${prefix}stop`,
+      value: "⏹ Stops playback, sets autoplay to off and clears the queue.",
     }
   );
 
@@ -133,72 +167,7 @@ client.on("messageCreate", async (message) => {
   const args = message.content.slice(prefix.length).trim().split(/ +/);
   const command = args.shift().toLowerCase();
 
-  if (!message.guild) {
-    switch (command) {
-      case "f":
-      case "flip":
-        if (
-          (parseInt(args[0]) > 0 &&
-            parseInt(args[0]) <= currency.getBalance(message.author.id) &&
-            (args[1].toLowerCase() == "tails" ||
-              args[1].toLowerCase() == "heads")) ||
-          (parseInt(args[0]) == 1 &&
-            currency.getBalance(message.author.id) <= 0 &&
-            (args[1].toLowerCase() == "tails" ||
-              args[1].toLowerCase() == "heads"))
-        ) {
-          coinflip.flip(
-            message,
-            currency,
-            parseInt(args[0]),
-            args[1].toLowerCase()
-          );
-        } else if (
-          (parseInt(args[1]) > 0 &&
-            parseInt(args[1]) <= currency.getBalance(message.author.id) &&
-            (args[0].toLowerCase() == "tails" ||
-              args[0].toLowerCase() == "heads")) ||
-          (parseInt(args[1]) == 1 &&
-            currency.getBalance(message.author.id) <= 0 &&
-            (args[0].toLowerCase() == "tails" ||
-              args[0].toLowerCase() == "heads"))
-        ) {
-          coinflip.flip(
-            message,
-            currency,
-            parseInt(args[1]),
-            args[0].toLowerCase()
-          );
-        }
-        break;
-      case "ping":
-        message.channel.send({
-          embeds: [
-            new Discord.MessageEmbed()
-              .setColor("#D57A6F")
-              .setDescription(`Pong 🏓 ${message.author}`),
-          ],
-        });
-        break;
-      case "help":
-        message.channel.send({ embeds: [helpEmbed] });
-        break;
-      case "balance":
-        message.channel.send({
-          embeds: [
-            new Discord.MessageEmbed()
-              .setColor("DARK_ORANGE")
-              .setDescription(
-                `${message.author}, you have: ${currency.getBalance(
-                  message.author.id
-                )}`
-              ),
-          ],
-        });
-        break;
-      default:
-    }
-  } else {
+  if (message.guild) {
     client.user.setActivity(`${prefix}help`, { type: "LISTENING" });
     let musicBot = subcriptions.get(message.guildId);
     switch (command) {
@@ -360,14 +329,26 @@ client.on("messageCreate", async (message) => {
         }
 
         break;
+      case "next":
       case "skip":
         if (musicBot) {
           musicBot.skip();
         }
         break;
+      case "pause":
+        if (musicBot) {
+          musicBot.pause();
+        }
+        break;
+      case "resume":
+        if (musicBot) {
+          musicBot.resume();
+        }
+        break;
       case "stop":
         if (musicBot) musicBot.stop();
         break;
+      case "q":
       case "queue":
         if (musicBot) musicBot.queuePrint();
         break;

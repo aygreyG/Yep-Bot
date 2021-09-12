@@ -336,11 +336,37 @@ class MusicBot {
   }
 
   pause() {
-    this.audioPlayer.pause(true);
+    if (this.audioPlayer.state.status === AudioPlayerStatus.Playing) {
+      this.mchannel.send({
+        embeds: [
+          new Discord.MessageEmbed()
+            .setColor("YELLOW")
+            .setThumbnail(this.audioPlayer.state.resource.metadata.thumb)
+            .addField(
+              "Paused:",
+              `[${this.audioPlayer.state.resource.metadata.title}](${this.audioPlayer.state.resource.metadata.url})`
+            ),
+        ],
+      });
+      this.audioPlayer.pause(true);
+    }
   }
 
   resume() {
     this.audioPlayer.unpause();
+    if (this.audioPlayer.state.status === AudioPlayerStatus.Playing) {
+      this.mchannel.send({
+        embeds: [
+          new Discord.MessageEmbed()
+            .setColor("DARK_NAVY")
+            .setThumbnail(this.audioPlayer.state.resource.metadata.thumb)
+            .addField(
+              "Resumed:",
+              `[${this.audioPlayer.state.resource.metadata.title}](${this.audioPlayer.state.resource.metadata.url})`
+            ),
+        ],
+      });
+    }
   }
 
   /**
