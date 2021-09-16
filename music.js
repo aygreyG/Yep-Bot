@@ -17,6 +17,7 @@ const { getInfo } = require("ytdl-core");
 const ytdl = require("ytdl-core");
 // this is used instead of ytdl because it may be more reliable
 const { raw } = require("youtube-dl-exec");
+const ytsr = require("ytsr");
 
 /**
  * Class of the Track implementation.
@@ -235,11 +236,11 @@ class MusicBot {
   }
 
   /**
-   * Gets info about the given url and if it is playable then tries to queues it.
+   * Gets info about the given url and if it is playable then tries to queue it.
    * @param {String} url The URL of the video that needs to be played.
    * @returns If the url is not playable.
    */
-  async play(url) {
+  async playUrl(url) {
     try {
       const info = await getInfo(url);
 
@@ -276,6 +277,117 @@ class MusicBot {
   }
 
   /**
+   * Searches for a song and if it was a play command it queues it,
+   * if it was a search command it gives you 4 options to choose from.
+   * @param {String} searchString The title of the song to search for.
+   * @param {Boolean} queueIt True if it should be autoqueued, false otherwise.
+   */
+  async searchTrack(searchString, queueIt, id) {
+    try {
+      // setting up a filter to use as a url
+      const filters1 = await ytsr.getFilters(searchString);
+      const filter1 = filters1.get("Type").get("Video");
+      // getting 4 videos
+      const videos = await ytsr(filter1.url, {
+        limit: 4,
+      });
+
+      // if it was a play command it should queue it automatically
+      if (videos.items.length > 0 && queueIt) {
+        const track = new Track(
+          videos.items[0].url,
+          videos.items[0].title,
+          videos.items[0].bestThumbnail.url
+        );
+        this.enqueue(track);
+        // if it was a search it should give you options to choose from (now it is 4 options)
+      } else if (videos.items.length > 0 && !queueIt && id != undefined) {
+        const searchEmbed = new Discord.MessageEmbed()
+          .setColor("AQUA")
+          .setTitle("**Choose a song that is good for you!**");
+
+        videos.items.map((vid, index) => {
+          searchEmbed.addField(
+            (index + 1).toString(),
+            `[${vid.title}](${vid.url})`
+          );
+        });
+
+        const row = new Discord.MessageActionRow().addComponents([
+          new Discord.MessageButton()
+            .setCustomId("1")
+            .setLabel("1")
+            .setStyle("PRIMARY"),
+          new Discord.MessageButton()
+            .setCustomId("2")
+            .setLabel("2")
+            .setStyle("PRIMARY"),
+          new Discord.MessageButton()
+            .setCustomId("3")
+            .setLabel("3")
+            .setStyle("PRIMARY"),
+          new Discord.MessageButton()
+            .setCustomId("4")
+            .setLabel("4")
+            .setStyle("PRIMARY"),
+          new Discord.MessageButton()
+            .setCustomId("X")
+            .setLabel("X")
+            .setStyle("DANGER"),
+        ]);
+
+        const msg = await this.mchannel.send({
+          embeds: [searchEmbed],
+          components: [row],
+        });
+
+        const collector = msg.createMessageComponentCollector({
+          componentType: "BUTTON",
+          time: 60000,
+        });
+
+        collector.on("collect", (i) => {
+          if (i.user.id === id) {
+            switch (i.customId) {
+              case "X":
+                const cancEmbed = new Discord.MessageEmbed()
+                  .setColor("DARK_RED")
+                  .setDescription("You cancelled this search.");
+                i.reply({ embeds: [cancEmbed], ephemeral: true });
+                break;
+              default:
+                const num = parseInt(i.customId) - 1;
+                const track = new Track(
+                  videos.items[num].url,
+                  videos.items[num].title,
+                  videos.items[num].bestThumbnail.url
+                );
+                this.enqueue(track);
+                const playEmbed = new Discord.MessageEmbed()
+                  .setColor("GREEN")
+                  .setDescription(`You choose: ${num}. ${track.title}`);
+                i.reply({ embeds: [playEmbed], ephemeral: true });
+                break;
+            }
+            collector.stop();
+          } else {
+            const cantEmbed = new Discord.MessageEmbed()
+              .setColor("RED")
+              .setDescription("You can't pick a song now!");
+            i.reply({ embeds: [cantEmbed], ephemeral: true });
+          }
+        });
+
+        collector.on("end", (collected, reason) => {
+          msg.edit({ components: [] });
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+  
+  /**
    * Stops the playback, clears the queue and turns off autoplay.
    */
   stop() {
@@ -303,7 +415,7 @@ class MusicBot {
   /**
    * Turns on or off autoplay.
    */
-  async autoPlay() {
+  autoPlay() {
     // console.log(this.autoplay);
     this.autoplay = !this.autoplay;
     this.mchannel.send({

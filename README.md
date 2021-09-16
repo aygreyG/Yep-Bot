@@ -20,6 +20,7 @@ Meméne?*
 - Youtube stuff:
     - ytdl-core
     - youtube-dl-exec
+    - ytsr (for searching on youtube)
 
 ### Deployment:
 - Get the dependencies

@@ -28,11 +28,11 @@ const client = new Discord.Client({
 });
 
 // Help szövege:
-const helpEmbed = new Discord.MessageEmbed()
+const helpEmbed1 = new Discord.MessageEmbed()
   .setColor("#ADE9F2")
-  .setDescription("__**Commands:**__")
+  .setTitle("__**Commands:**__")
   .addFields(
-    { name: `${prefix}help`, value: "❓ Lists all available commands." },
+    { name: `${prefix}help <optional page number>`, value: "❓ Lists the commands on the given page." },
     {
       name: `${prefix}b/${prefix}blackjack`,
       value: "🃏 Starts a new blackjack game.",
@@ -58,22 +58,34 @@ const helpEmbed = new Discord.MessageEmbed()
       name: `${prefix}ping`,
       value: "🏓 Pings the bot, if it's available it will answer.",
     },
+  )
+  .setFooter("Page: 1/2");
+
+const helpEmbed2 = new Discord.MessageEmbed()
+  .setColor("#ADE9F2")
+  .setTitle("__**Commands:**__")
+  .addFields(
+    { name: `${prefix}help <optional page number>`, value: "❓ Lists the commands on the given page." },
     {
-      name: `${prefix}p/${prefix}play <youtube url>`,
+      name: `${prefix}p/${prefix}play <youtube url>/<song name>`,
       value:
-        "🎶 Joins your voice channel and plays the given youtube song. If there is already a song playing, it will be put in a queue.",
+        "🎶 Joins your voice channel and plays the youtube url or searches for a song. If there is already a song   playing, it will be put in a queue.",
+    },
+    {
+      name: `${prefix}search/${prefix}s <song name>`,
+      value: "❔ Searches youtube and gives you 4 options to choose from.",
     },
     {
       name: `${prefix}queue/${prefix}q`,
       value: "📃 Shows you the queue.",
     },
     {
-      name: `${prefix}skip/${prefix}next`,
+      name: `${prefix}skip/${prefix}next/${prefix}n`,
       value:
-        "⏭ Skips the currently playing song, if there is no song in the queue and autoplay is enabled, plays a related song.",
+        "⏭ Skips the currently playing song, if there is no song in the queue and autoplay is enabled, plays a related  song.",
     },
     {
-      name: `${prefix}autoplay`,
+      name: `${prefix}autoplay/${prefix}ap`,
       value: "🔀 It enables/disables autoplay.",
     },
     {
@@ -92,31 +104,32 @@ const helpEmbed = new Discord.MessageEmbed()
       name: `${prefix}stop`,
       value: "⏹ Stops playback, sets autoplay to off and clears the queue.",
     }
-  );
+  )
+  .setFooter("Page: 2/2");
 
-/* add metódus hozzáadása currencyhez */
+  /* add metódus hozzáadása currencyhez */
 
-const leaderboardEmbed = (members) => {
-  const mm = members.map((member) => member.id);
-  return new Discord.MessageEmbed().setColor("ORANGE").setDescription(
-    currency
-      .sort((a, b) => b.balance - a.balance)
-      .filter(
-        (user) =>
-          client.users.cache.has(user.user_id) &&
-          mm.includes(user.user_id) &&
-          user.user_id != ""
-      )
-      .first(15)
-      .map(
-        (user, position) =>
-          `#${position + 1} 👉 ${
-            client.users.cache.get(user.user_id).username
-          }: ${user.balance}`
-      )
-      .join("\n")
-  );
-};
+  const leaderboardEmbed = (members) => {
+    const mm = members.map((member) => member.id);
+    return new Discord.MessageEmbed().setColor("ORANGE").setDescription(
+      currency
+        .sort((a, b) => b.balance - a.balance)
+        .filter(
+          (user) =>
+            client.users.cache.has(user.user_id) &&
+            mm.includes(user.user_id) &&
+            user.user_id != ""
+        )
+        .first(15)
+        .map(
+          (user, position) =>
+            `#${position + 1} 👉 ${
+              client.users.cache.get(user.user_id).username
+            }: ${user.balance}`
+        )
+        .join("\n")
+    );
+  };
 
 Reflect.defineProperty(currency, "add", {
   value: async function add(id, amount) {
@@ -233,7 +246,11 @@ client.on("messageCreate", async (message) => {
         });
         break;
       case "help":
-        message.channel.send({ embeds: [helpEmbed] });
+        if (args.length > 0) {
+          if (args[0] == "2") {
+            message.channel.send({ embeds: [helpEmbed2] });
+          } else message.channel.send({ embeds: [helpEmbed1] });
+        } else message.channel.send({ embeds: [helpEmbed1] });
         break;
       case "l":
       case "leaderboard":
@@ -324,11 +341,23 @@ client.on("messageCreate", async (message) => {
           return;
         }
 
-        if (url) {
-          musicBot.play(url);
+        if (url && url.includes("https://www.youtube.com")) {
+          musicBot.playUrl(url);
+        } else if (args.length > 0) {
+          const searchString = args.join(" ");
+          musicBot.searchTrack(searchString, true);
         }
 
         break;
+      case "s":
+      case "search":
+        if (musicBot) {
+          if (args.length > 0) {
+            musicBot.searchTrack(args.join(" "), false, message.author.id);
+          }
+        }
+        break;
+      case "n":
       case "next":
       case "skip":
         if (musicBot) {
@@ -352,6 +381,7 @@ client.on("messageCreate", async (message) => {
       case "queue":
         if (musicBot) musicBot.queuePrint();
         break;
+      case "ap":
       case "autoplay":
         if (musicBot) musicBot.autoPlay();
         break;
@@ -361,15 +391,7 @@ client.on("messageCreate", async (message) => {
           musicBot.leave();
           subcriptions.delete(message.guildId);
 
-          const leftemb = await message.channel.send({
-            embeds: [
-              new Discord.MessageEmbed()
-                .setColor("GREEN")
-                .setDescription("Left the channel!"),
-            ],
-          });
-          await wait(2000);
-          leftemb.delete().catch(console.error);
+          message.react("👍");
         } else {
           message.channel.send({
             embeds: [
