@@ -365,7 +365,7 @@ class MusicBot {
                 this.enqueue(track);
                 const playEmbed = new Discord.MessageEmbed()
                   .setColor("GREEN")
-                  .setDescription(`You choose: ${num}. ${track.title}`);
+                  .setDescription(`You choose: ${num+1}. ${track.title}`);
                 i.reply({ embeds: [playEmbed], ephemeral: true });
                 break;
             }
