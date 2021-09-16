@@ -302,23 +302,23 @@ client.on("messageCreate", async (message) => {
         break;
       case "id":
         if (args.length > 0) {
-          message.channel.send({ embeds: [message.mentions.users.first().id] });
+          message.channel.send({ content: message.mentions.users.first().id });
         }
         break;
       case "add":
         if (message.author.id === "107398653542400000") {
           if (message.mentions.users.size) {
             currency.add(message.mentions.users.first().id, args[1]);
-            return message.channel.send(
-              `${message.mentions.users.first()} now has ${currency.getBalance(
+            return message.channel.send({
+              content: `${message.mentions.users.first()} now has ${currency.getBalance(
                 message.mentions.users.first().id
               )}`
-            );
+            });
           }
           currency.add(message.author.id, args[0]);
-          message.reply(
-            `you now have ${currency.getBalance(message.author.id)}`
-          );
+          message.reply({
+            content: `you now have ${currency.getBalance(message.author.id)}`
+          });
         }
         break;
       case "play":
