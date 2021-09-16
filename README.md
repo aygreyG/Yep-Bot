@@ -1,4 +1,4 @@
-# BlackjackBot
+# Yep Bot (a blackjack and music bot for discord)
 
 *méé nincs readme? 😂
 Minek legyen?
