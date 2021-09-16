@@ -8,3 +8,7 @@ nodemon.json
 database.sqlite.old
 database.sqlite
 package.json
+subs.js
+subs.ts
+track.js
+track.ts

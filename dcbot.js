@@ -1,26 +1,41 @@
 const Discord = require("discord.js");
+const { prefix, token } = require("./config.json");
+const blackjack = require("./blackjack");
+const coinflip = require("./coinflip");
+const { oneVOne } = require("./1v1");
+const { Users } = require("./dbObjects");
+const { MusicBot } = require("./music");
+const {
+  AudioPlayerStatus,
+  AudioResource,
+  entersState,
+  joinVoiceChannel,
+  VoiceConnectionStatus,
+} = require("@discordjs/voice");
+const { promisify } = require("util");
+
+const wait = promisify(setTimeout);
+const currency = new Discord.Collection();
 const client = new Discord.Client({
   intents: [
     Discord.Intents.FLAGS.GUILDS,
     Discord.Intents.FLAGS.GUILD_MESSAGES,
     Discord.Intents.FLAGS.GUILD_MEMBERS,
     Discord.Intents.FLAGS.GUILD_MESSAGE_REACTIONS,
+    Discord.Intents.FLAGS.GUILD_VOICE_STATES,
+    Discord.Intents.FLAGS.GUILD_INTEGRATIONS,
   ],
 });
-const { prefix, token } = require("./config.json");
-const blackjack = require("./blackjack");
-const coinflip = require("./coinflip");
-const { oneVOne } = require("./1v1");
-
-const { Users } = require("./dbObjects");
-const currency = new Discord.Collection();
 
 // Help szövege:
-const helpEmbed = new Discord.MessageEmbed()
+const helpEmbed1 = new Discord.MessageEmbed()
   .setColor("#ADE9F2")
-  .setDescription("__**Commands:**__")
+  .setTitle("__**Commands:**__")
   .addFields(
-    { name: `${prefix}help`, value: "❓ Lists all available commands." },
+    {
+      name: `${prefix}help <optional page number>`,
+      value: "❓ Lists the commands on the given page.",
+    },
     {
       name: `${prefix}b/${prefix}blackjack`,
       value: "🃏 Starts a new blackjack game.",
@@ -46,7 +61,57 @@ const helpEmbed = new Discord.MessageEmbed()
       name: `${prefix}ping`,
       value: "🏓 Pings the bot, if it's available it will answer.",
     }
-  );
+  )
+  .setFooter("Page: 1/2");
+
+const helpEmbed2 = new Discord.MessageEmbed()
+  .setColor("#ADE9F2")
+  .setTitle("__**Commands:**__")
+  .addFields(
+    {
+      name: `${prefix}help <optional page number>`,
+      value: "❓ Lists the commands on the given page.",
+    },
+    {
+      name: `${prefix}p/${prefix}play <youtube url>/<song name>`,
+      value:
+        "🎶 Joins your voice channel and plays the youtube url or searches for a song. If there is already a song   playing, it will be put in a queue.",
+    },
+    {
+      name: `${prefix}search/${prefix}s <song name>`,
+      value: "❔ Searches youtube and gives you 4 options to choose from.",
+    },
+    {
+      name: `${prefix}queue/${prefix}q`,
+      value: "📃 Shows you the queue.",
+    },
+    {
+      name: `${prefix}skip/${prefix}next/${prefix}n`,
+      value:
+        "⏭ Skips the currently playing song, if there is no song in the queue and autoplay is enabled, plays a related  song.",
+    },
+    {
+      name: `${prefix}autoplay/${prefix}ap`,
+      value: "🔀 It enables/disables autoplay.",
+    },
+    {
+      name: `${prefix}leave`,
+      value: "⏏ Stops playback and leaves the channel.",
+    },
+    {
+      name: `${prefix}pause`,
+      value: "⏸ Pauses the playback.",
+    },
+    {
+      name: `${prefix}resume`,
+      value: "▶ Resumes the playback.",
+    },
+    {
+      name: `${prefix}stop`,
+      value: "⏹ Stops playback, sets autoplay to off and clears the queue.",
+    }
+  )
+  .setFooter("Page: 2/2");
 
 /* add metódus hozzáadása currencyhez */
 
@@ -111,79 +176,19 @@ client.once("ready", async () => {
   console.log("I'm ready!" + ` Logged in as '${client.user.tag}'`);
 });
 
-client.on("messageCreate", (message) => {
+// Key: guildId, Value: MusicBot
+const subcriptions = new Map();
+
+client.on("messageCreate", async (message) => {
   if (message.content.toLowerCase().includes("yep") && !message.author.bot)
     message.reply("COCK");
   if (!message.content.startsWith(prefix) || message.author.bot) return;
   const args = message.content.slice(prefix.length).trim().split(/ +/);
   const command = args.shift().toLowerCase();
 
-  if (!message.guild) {
-    switch (command) {
-      case "f":
-      case "flip":
-        if (
-          (parseInt(args[0]) > 0 &&
-            parseInt(args[0]) <= currency.getBalance(message.author.id) &&
-            (args[1].toLowerCase() == "tails" ||
-              args[1].toLowerCase() == "heads")) ||
-          (parseInt(args[0]) == 1 &&
-            currency.getBalance(message.author.id) <= 0 &&
-            (args[1].toLowerCase() == "tails" ||
-              args[1].toLowerCase() == "heads"))
-        ) {
-          coinflip.flip(
-            message,
-            currency,
-            parseInt(args[0]),
-            args[1].toLowerCase()
-          );
-        } else if (
-          (parseInt(args[1]) > 0 &&
-            parseInt(args[1]) <= currency.getBalance(message.author.id) &&
-            (args[0].toLowerCase() == "tails" ||
-              args[0].toLowerCase() == "heads")) ||
-          (parseInt(args[1]) == 1 &&
-            currency.getBalance(message.author.id) <= 0 &&
-            (args[0].toLowerCase() == "tails" ||
-              args[0].toLowerCase() == "heads"))
-        ) {
-          coinflip.flip(
-            message,
-            currency,
-            parseInt(args[1]),
-            args[0].toLowerCase()
-          );
-        }
-        break;
-      case "ping":
-        message.channel.send({
-          embeds: [
-            new Discord.MessageEmbed()
-              .setColor("#D57A6F")
-              .setDescription(`Pong 🏓 ${message.author}`),
-          ],
-        });
-        break;
-      case "help":
-        message.channel.send({ embeds: [helpEmbed] });
-        break;
-      case "balance":
-        message.channel.send({
-          embeds: [
-            new Discord.MessageEmbed()
-              .setColor("DARK_ORANGE")
-              .setDescription(
-                `${message.author}, you have: ${currency.getBalance(
-                  message.author.id
-                )}`
-              ),
-          ],
-        });
-        break;
-      default:
-    }
-  } else {
+  if (message.guild) {
+    client.user.setActivity(`${prefix}help`, { type: "LISTENING" });
+    let musicBot = subcriptions.get(message.guildId);
     switch (command) {
       case "1v1":
         if (args[0] !== undefined && message.mentions.users.size) {
@@ -247,7 +252,11 @@ client.on("messageCreate", (message) => {
         });
         break;
       case "help":
-        message.channel.send({ embeds: [helpEmbed] });
+        if (args.length > 0) {
+          if (args[0] == "2") {
+            message.channel.send({ embeds: [helpEmbed2] });
+          } else message.channel.send({ embeds: [helpEmbed1] });
+        } else message.channel.send({ embeds: [helpEmbed1] });
         break;
       case "l":
       case "leaderboard":
@@ -312,7 +321,128 @@ client.on("messageCreate", (message) => {
           );
         }
         break;
+      case "play":
+      case "p":
+        const url = args[0];
+
+        if (
+          !musicBot &&
+          message.member.voice.channel &&
+          message.member instanceof Discord.GuildMember
+        ) {
+          const channel = message.member.voice.channel;
+          musicBot = new MusicBot(channel, message.channel);
+          subcriptions.set(message.guildId, musicBot);
+          console.log(`New musicbot set to guild: ${message.guildId}!`);
+        }
+
+        if (!subcriptions.has(message.guildId)) {
+          message.channel.send({
+            embeds: [
+              new Discord.MessageEmbed()
+                .setColor("RED")
+                .setDescription("Join a voice channel and try again!"),
+            ],
+          });
+          return;
+        }
+
+        if (url && url.includes("https://www.youtube.com")) {
+          musicBot.playUrl(url);
+        } else if (args.length > 0) {
+          const searchString = args.join(" ");
+          musicBot.searchTrack(searchString, true);
+        }
+
+        break;
+      case "s":
+      case "search":
+        if (
+          !musicBot &&
+          message.member.voice.channel &&
+          message.member instanceof Discord.GuildMember
+        ) {
+          const channel = message.member.voice.channel;
+          musicBot = new MusicBot(channel, message.channel);
+          subcriptions.set(message.guildId, musicBot);
+          console.log(`New musicbot set to guild: ${message.guildId}!`);
+        }
+
+        if (!subcriptions.has(message.guildId)) {
+          message.channel.send({
+            embeds: [
+              new Discord.MessageEmbed()
+                .setColor("RED")
+                .setDescription("Join a voice channel and try again!"),
+            ],
+          });
+          return;
+        }
+
+        if (musicBot) {
+          if (args.length > 0) {
+            musicBot.searchTrack(args.join(" "), false, message.author.id);
+          }
+        }
+        break;
+      case "n":
+      case "next":
+      case "skip":
+        if (musicBot) {
+          musicBot.skip();
+        }
+        break;
+      case "pause":
+        if (musicBot) {
+          musicBot.pause();
+        }
+        break;
+      case "resume":
+        if (musicBot) {
+          musicBot.resume();
+        }
+        break;
+      case "stop":
+        if (musicBot) musicBot.stop();
+        break;
+      case "q":
+      case "queue":
+        if (musicBot) musicBot.queuePrint();
+        break;
+      case "ap":
+      case "autoplay":
+        if (musicBot) musicBot.autoPlay();
+        break;
+      case "leave":
+        // let subscription = subcriptions.get(message.guildId);
+        if (musicBot) {
+          musicBot.leave();
+          subcriptions.delete(message.guildId);
+
+          message.react("👍");
+        } else {
+          message.channel.send({
+            embeds: [
+              new Discord.MessageEmbed()
+                .setColor("RED")
+                .setDescription("Not in this server!"),
+            ],
+          });
+        }
+        break;
       default:
+    }
+  }
+});
+
+client.on("voiceStateUpdate", (oldState, newState) => {
+  if (newState.channel == null) {
+    if (oldState.channel.members.size == 1) {
+      if (oldState.channel.members.first().id == client.user.id) {
+        const musicBot = subcriptions.get(oldState.guild.id);
+        musicBot.leave();
+        subcriptions.delete(oldState.guild.id);
+      }
     }
   }
 });
