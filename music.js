@@ -493,7 +493,7 @@ class MusicBot {
     } else {
       const embed = new Discord.MessageEmbed()
         .setColor("WHITE")
-        .setDescription("The queue is:");
+        .setTitle("**The queue is:**");
       let queueNum = 1;
       this.queue.forEach((track) => {
         embed.addField(queueNum.toString(), `[${track.title}](${track.url})`);

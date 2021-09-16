@@ -32,7 +32,10 @@ const helpEmbed1 = new Discord.MessageEmbed()
   .setColor("#ADE9F2")
   .setTitle("__**Commands:**__")
   .addFields(
-    { name: `${prefix}help <optional page number>`, value: "❓ Lists the commands on the given page." },
+    {
+      name: `${prefix}help <optional page number>`,
+      value: "❓ Lists the commands on the given page.",
+    },
     {
       name: `${prefix}b/${prefix}blackjack`,
       value: "🃏 Starts a new blackjack game.",
@@ -57,7 +60,7 @@ const helpEmbed1 = new Discord.MessageEmbed()
     {
       name: `${prefix}ping`,
       value: "🏓 Pings the bot, if it's available it will answer.",
-    },
+    }
   )
   .setFooter("Page: 1/2");
 
@@ -65,7 +68,10 @@ const helpEmbed2 = new Discord.MessageEmbed()
   .setColor("#ADE9F2")
   .setTitle("__**Commands:**__")
   .addFields(
-    { name: `${prefix}help <optional page number>`, value: "❓ Lists the commands on the given page." },
+    {
+      name: `${prefix}help <optional page number>`,
+      value: "❓ Lists the commands on the given page.",
+    },
     {
       name: `${prefix}p/${prefix}play <youtube url>/<song name>`,
       value:
@@ -107,29 +113,29 @@ const helpEmbed2 = new Discord.MessageEmbed()
   )
   .setFooter("Page: 2/2");
 
-  /* add metódus hozzáadása currencyhez */
+/* add metódus hozzáadása currencyhez */
 
-  const leaderboardEmbed = (members) => {
-    const mm = members.map((member) => member.id);
-    return new Discord.MessageEmbed().setColor("ORANGE").setDescription(
-      currency
-        .sort((a, b) => b.balance - a.balance)
-        .filter(
-          (user) =>
-            client.users.cache.has(user.user_id) &&
-            mm.includes(user.user_id) &&
-            user.user_id != ""
-        )
-        .first(15)
-        .map(
-          (user, position) =>
-            `#${position + 1} 👉 ${
-              client.users.cache.get(user.user_id).username
-            }: ${user.balance}`
-        )
-        .join("\n")
-    );
-  };
+const leaderboardEmbed = (members) => {
+  const mm = members.map((member) => member.id);
+  return new Discord.MessageEmbed().setColor("ORANGE").setDescription(
+    currency
+      .sort((a, b) => b.balance - a.balance)
+      .filter(
+        (user) =>
+          client.users.cache.has(user.user_id) &&
+          mm.includes(user.user_id) &&
+          user.user_id != ""
+      )
+      .first(15)
+      .map(
+        (user, position) =>
+          `#${position + 1} 👉 ${
+            client.users.cache.get(user.user_id).username
+          }: ${user.balance}`
+      )
+      .join("\n")
+  );
+};
 
 Reflect.defineProperty(currency, "add", {
   value: async function add(id, amount) {
@@ -351,6 +357,28 @@ client.on("messageCreate", async (message) => {
         break;
       case "s":
       case "search":
+        if (
+          !musicBot &&
+          message.member.voice.channel &&
+          message.member instanceof Discord.GuildMember
+        ) {
+          const channel = message.member.voice.channel;
+          musicBot = new MusicBot(channel, message.channel);
+          subcriptions.set(message.guildId, musicBot);
+          console.log(`New musicbot set to guild: ${message.guildId}!`);
+        }
+
+        if (!subcriptions.has(message.guildId)) {
+          message.channel.send({
+            embeds: [
+              new Discord.MessageEmbed()
+                .setColor("RED")
+                .setDescription("Join a voice channel and try again!"),
+            ],
+          });
+          return;
+        }
+
         if (musicBot) {
           if (args.length > 0) {
             musicBot.searchTrack(args.join(" "), false, message.author.id);
