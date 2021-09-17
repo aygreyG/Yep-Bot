@@ -17,6 +17,7 @@ Meméne?*
 - There might be comments, commits or other things that are written in hungarian.
 - There is an add command which only works if you change the id [here](./dcbot.js#L309) to your own id, you can easily get your id with the id command.
 - If you have a problem just open an issue.
+- You can find a discord bot token in the first versions, because this was a private repository. I already changed it.
 
 ### Dependencies:
 - Nodejs version: 16 and up
