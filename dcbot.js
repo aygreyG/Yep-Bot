@@ -312,12 +312,12 @@ client.on("messageCreate", async (message) => {
             return message.channel.send({
               content: `${message.mentions.users.first()} now has ${currency.getBalance(
                 message.mentions.users.first().id
-              )}`
+              )}`,
             });
           }
           currency.add(message.author.id, args[0]);
           message.reply({
-            content: `you now have ${currency.getBalance(message.author.id)}`
+            content: `you now have ${currency.getBalance(message.author.id)}`,
           });
         }
         break;
@@ -333,7 +333,9 @@ client.on("messageCreate", async (message) => {
           const channel = message.member.voice.channel;
           musicBot = new MusicBot(channel, message.channel);
           subcriptions.set(message.guildId, musicBot);
-          console.log(`New musicbot set to guild: ${message.guildId}!`);
+          console.log(
+            `New musicbot set to guild: ${message.guildId} ${message.guild.name}!`
+          );
         }
 
         if (!subcriptions.has(message.guildId)) {
@@ -365,7 +367,9 @@ client.on("messageCreate", async (message) => {
           const channel = message.member.voice.channel;
           musicBot = new MusicBot(channel, message.channel);
           subcriptions.set(message.guildId, musicBot);
-          console.log(`New musicbot set to guild: ${message.guildId}!`);
+          console.log(
+            `New musicbot set to guild: ${message.guildId} ${message.guild.name}!`
+          );
         }
 
         if (!subcriptions.has(message.guildId)) {
@@ -389,7 +393,7 @@ client.on("messageCreate", async (message) => {
       case "next":
       case "skip":
         if (musicBot) {
-          musicBot.skip();
+          musicBot.skipMusic();
         }
         break;
       case "pause":
@@ -429,6 +433,10 @@ client.on("messageCreate", async (message) => {
             ],
           });
         }
+        break;
+      case "repeat":
+      case "loop":
+        if (musicBot) musicBot.repeatChange();
         break;
       default:
     }

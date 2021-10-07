@@ -60,6 +60,8 @@ class MusicBot {
     // This queue contains all the unused tracks
     this.queue = [];
     this.autoplay = false;
+    this.repeat = false;
+    this.skip = false;
 
     // this.connection.on('stateChange', (oldState, newState) => {
     //   console.log(`Connection transitioned from ${oldState.status} to ${newState.status}`);
@@ -77,7 +79,24 @@ class MusicBot {
 
     // This is responsible for autoplay and playing the next song in the queue
     this.audioPlayer.on("stateChange", async (oldState, newState) => {
+      if (oldState.status == AudioPlayerStatus.Idle && newState.status == AudioPlayerStatus.Playing) {
+        this.skip = false;
+      }
       if (newState.status == AudioPlayerStatus.Idle) {
+        // console.log(oldState.status + "\n" + this.repeat + "  " + this.skip);
+        if (this.repeat && !this.skip) {
+          if (oldState.status == AudioPlayerStatus.Playing) {
+            const track = new Track(
+              oldState.resource.metadata.url,
+              oldState.resource.metadata.title,
+              oldState.resource.metadata.thumb
+            );
+
+            this.playTrack(track);
+            return;
+          }
+        }
+        this.skip = false;
         const play = this.queue.shift();
         if (play) {
           this.playTrack(play);
@@ -169,7 +188,6 @@ class MusicBot {
       this.queue.length > 0 ||
       this.audioPlayer.state.status == AudioPlayerStatus.Playing
     ) {
-      // console.log('The audio player has queued a song');
       this.queue.push(track);
       this.mchannel.send({
         embeds: [
@@ -230,9 +248,26 @@ class MusicBot {
           })
           .catch(console.error);
       })
-      .catch((error) =>
-        console.error("Error in stream process(prob skipped or stopped)")
-      );
+      .catch((error) => {
+        // if it wasn't a skip then it should send a message to let people know
+        if (!error.shortMessage.includes("ERR_STREAM_PREMATURE_CLOSE")) {
+          this.mchannel.send({
+            embeds: [
+              new Discord.MessageEmbed()
+                .setColor("RED")
+                .setTitle("Playback error!")
+                .setDescription(
+                  "Music playback stopped unexpectedly, please try again!"
+                ),
+            ],
+          });
+          console.error("Playback error: \n" + error.shortMessage);
+        } else
+        // if it was a skip it shouldn't spam to the console
+          console.error(
+            `Guild name: ${this.channel.guild.name}. Error in stream process(probably skipped or stopped)`
+          );
+      });
   }
 
   /**
@@ -365,7 +400,7 @@ class MusicBot {
                 this.enqueue(track);
                 const playEmbed = new Discord.MessageEmbed()
                   .setColor("GREEN")
-                  .setDescription(`You choose: ${num+1}. ${track.title}`);
+                  .setDescription(`You choose: ${num + 1}. ${track.title}`);
                 i.reply({ embeds: [playEmbed], ephemeral: true });
                 break;
             }
@@ -386,12 +421,13 @@ class MusicBot {
       console.error(e);
     }
   }
-  
+
   /**
    * Stops the playback, clears the queue and turns off autoplay.
    */
   stop() {
     this.autoplay = false;
+    this.repeat = false;
     this.queue = [];
     this.audioPlayer.stop(true);
     this.mchannel.send({
@@ -432,7 +468,8 @@ class MusicBot {
   /**
    * Skips or stops the playback depending on the state of the queue.
    */
-  skip() {
+  skipMusic() {
+    this.skip = true;
     if (this.queue.length === 0 && !this.autoplay) {
       this.audioPlayer.stop(true);
       this.mchannel.send({
@@ -500,6 +537,31 @@ class MusicBot {
         queueNum++;
       });
       this.mchannel.send({ embeds: [embed] });
+    }
+  }
+
+  /**
+   * Turns on and off the repeat function.
+   */
+  repeatChange() {
+    if (this.repeat) {
+      this.mchannel.send({
+        embeds: [
+          new Discord.MessageEmbed()
+            .setColor("YELLOW")
+            .setDescription("Repeat is now disabled!"),
+        ],
+      });
+      this.repeat = false;
+    } else {
+      this.mchannel.send({
+        embeds: [
+          new Discord.MessageEmbed()
+            .setColor("WHITE")
+            .setDescription("Repeat is now enabled!"),
+        ],
+      });
+      this.repeat = true;
     }
   }
 }
