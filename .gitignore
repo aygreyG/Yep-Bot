@@ -7,7 +7,7 @@ package-lock.json
 nodemon.json
 database.sqlite.old
 database.sqlite
-package.json
+package.old.json
 subs.js
 subs.ts
 track.js

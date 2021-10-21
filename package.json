@@ -1,0 +1,23 @@
+{
+  "name": "yep-bot",
+  "description": "This is a work in progress version of my discord bot, use it on your own risk!",
+  "main": "dcbot.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postinstall": "node init.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@discordjs/opus": "^0.5.3",
+    "@discordjs/voice": "^0.6.0",
+    "discord.js": "^13.1.0",
+    "ffmpeg-static": "^4.4.0",
+    "libsodium-wrappers": "^0.7.9",
+    "sequelize": "^6.6.5",
+    "sqlite3": "^5.0.2",
+    "youtube-dl-exec": "^1.2.6",
+    "ytdl-core": "^4.9.1",
+    "ytsr": "^3.5.3"
+  }
+}

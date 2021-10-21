@@ -18,3 +18,15 @@ sequelize
     sequelize.close();
   })
   .catch(console.error);
+
+try {
+  const { prefix, token } = require("./config.json");
+} catch (err) {
+  const fs = require("fs");
+  try {
+    fs.writeFileSync("./config.json", "{\n    \"prefix\": \"your-prefix\",\n    \"token\": \"your-token\"\n}","utf-8");
+    console.log("Config.json created successfully. PLEASE UPDATE CONFIG.JSON BEFORE STARTING THE BOT!");
+  } catch (e) {
+    console.error(e);
+  }
+}

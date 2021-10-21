@@ -38,13 +38,7 @@ Meméne?*
     - ytsr (for searching on youtube)
 
 ### Deployment:
-- Get the dependencies
-- Make config.json and put your token and prefix (which should be only a character, eg. *$*) like this:
-```
-{
-    "prefix": "your-prefix",
-    "token": "your-token"
-}
-```
-- run: *node ./dbInit.js* (this creates your database)
+- Install the latest version of node (for now Node v16.6.0 or higher)
+- Run *npm install* in your project folder
+- Edit config.json and put your token and prefix (which should be only a character, eg. *$*) in it.
 - run: *node ./dcbot.js*
