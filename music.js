@@ -18,6 +18,8 @@ const ytdl = require("ytdl-core");
 // this is used instead of ytdl because it may be more reliable
 const { raw } = require("youtube-dl-exec");
 const ytsr = require("ytsr");
+const fs = require("fs");
+const ytpl = require("ytpl");
 
 /**
  * Class of the Track implementation.
@@ -79,7 +81,10 @@ class MusicBot {
 
     // This is responsible for autoplay and playing the next song in the queue
     this.audioPlayer.on("stateChange", async (oldState, newState) => {
-      if (oldState.status == AudioPlayerStatus.Idle && newState.status == AudioPlayerStatus.Playing) {
+      if (
+        oldState.status == AudioPlayerStatus.Idle &&
+        newState.status == AudioPlayerStatus.Playing
+      ) {
         this.skip = false;
       }
       if (newState.status == AudioPlayerStatus.Idle) {
@@ -183,20 +188,22 @@ class MusicBot {
    * It queues or plays the track depending on the state of the queue.
    * @param {Track} track The track that needs to be queued.
    */
-  enqueue(track) {
+  enqueue(track, embed = true) {
     if (
       this.queue.length > 0 ||
       this.audioPlayer.state.status == AudioPlayerStatus.Playing
     ) {
       this.queue.push(track);
-      this.mchannel.send({
-        embeds: [
-          new Discord.MessageEmbed()
-            .setColor("DARK_BUT_NOT_BLACK")
-            .setThumbnail(track.thumb)
-            .addField("Queued: ", `[${track.title}](${track.url})`),
-        ],
-      });
+      if (embed) {
+        this.mchannel.send({
+          embeds: [
+            new Discord.MessageEmbed()
+              .setColor("DARK_BUT_NOT_BLACK")
+              .setThumbnail(track.thumb)
+              .addField("Queued: ", `[${track.title}](${track.url})`),
+          ],
+        });
+      }
     } else {
       this.playTrack(track);
 
@@ -262,8 +269,9 @@ class MusicBot {
             ],
           });
           console.error("Playback error: \n" + error.shortMessage);
-        } else
+        }
         // if it was a skip it shouldn't spam to the console
+        else
           console.error(
             `Guild name: ${this.channel.guild.name}. Error in stream process(probably skipped or stopped)`
           );
@@ -280,6 +288,8 @@ class MusicBot {
       const info = await getInfo(url);
 
       if (info) {
+        // console.log("eljut ide");
+        // fs.writeFile("./info.json","Data\n" + JSON.stringify(info.videoDetails), "utf8",() => console.log("Written to info file!"));
         if (info.videoDetails.isLiveContent) {
           this.mchannel.send({
             embeds: [
@@ -308,6 +318,142 @@ class MusicBot {
         ],
       });
       console.error("no video found");
+    }
+  }
+
+  /**
+   * Searches for a playlist with ytpl, and queues the songs.
+   * @param {string} searchString The playlist's url or a song's url that's in a playlist.
+   * @param {string} id The id of the user who called this function.
+   */
+  async playlistSearch(searchString, id) {
+    try {
+      const playlist = await ytpl(searchString);
+      // fs.writeFile("./playlist.json", JSON.stringify(playlist), "utf8", () => console.log("playlist written"));
+      const embed = new Discord.MessageEmbed()
+        .setColor("BLURPLE")
+        .setThumbnail(playlist.bestThumbnail.url)
+        .setTitle("**Choose what you would like to do with this playlist:**")
+        .setDescription(
+          playlist.title + ", song count: " + playlist.estimatedItemCount
+        )
+        .addFields([
+          { name: "1", value: "Queue all songs" },
+          {
+            name: "2",
+            value: "Choose a song from the playlist (not implemented yet)",
+          },
+          { name: "X", value: "Cancel" },
+        ]);
+
+      const row = new Discord.MessageActionRow().addComponents([
+        new Discord.MessageButton()
+          .setCustomId("1")
+          .setLabel("1")
+          .setStyle("PRIMARY"),
+        new Discord.MessageButton()
+          .setCustomId("2")
+          .setLabel("2")
+          .setStyle("PRIMARY")
+          .setDisabled(true),
+        new Discord.MessageButton()
+          .setCustomId("X")
+          .setLabel("X")
+          .setStyle("DANGER"),
+      ]);
+
+      const msg = await this.mchannel.send({
+        embeds: [embed],
+        components: [row],
+      });
+
+      const collector = msg.createMessageComponentCollector({
+        componentType: "BUTTON",
+        time: 60000,
+      });
+
+      collector.on("collect", (i) => {
+        if (i.user.id === id) {
+          switch (i.customId) {
+            case "X":
+              const cancEmbed = new Discord.MessageEmbed()
+                .setColor("DARK_RED")
+                .setDescription("You cancelled.");
+              i.reply({ embeds: [cancEmbed], ephemeral: true });
+              break;
+            case "1":
+              const queueEmbed = new Discord.MessageEmbed()
+                .setColor("DARK_GREEN")
+                .setDescription("Playlist is queued.");
+              i.reply({ embeds: [queueEmbed], ephemeral: false });
+              if (
+                this.queue.length > 0 ||
+                this.audioPlayer.state.status == AudioPlayerStatus.Playing
+              ) {
+                playlist.items.forEach((item) => {
+                  this.enqueue(
+                    new Track(
+                      item.url.split("&list")[0],
+                      item.title,
+                      item.bestThumbnail.url
+                    ),
+                    false
+                  );
+                });
+              } else {
+                playlist.items.forEach((item, index) => {
+                  if (index == 0) {
+                    // console.log(item.url.split("&list")[0]);
+                    this.enqueue(
+                      new Track(
+                        item.url.split("&list")[0],
+                        item.title,
+                        item.bestThumbnail.url
+                      ),
+                      false
+                    );
+                  } else {
+                    // console.log(item.url.split("&list")[0]);
+                    this.queue.push(
+                      new Track(
+                        item.url.split("&list")[0],
+                        item.title,
+                        item.bestThumbnail.url
+                      )
+                    );
+                  }
+                });
+              }
+              break;
+            case "2":
+              collector.stop("two");
+              break;
+            default:
+              break;
+          }
+          collector.stop();
+        } else {
+          const cantEmbed = new Discord.MessageEmbed()
+            .setColor("RED")
+            .setDescription("You can't choose now!");
+          i.reply({ embeds: [cantEmbed], ephemeral: true });
+        }
+      });
+
+      collector.on("end", (collected, reason) => {
+        row.components.forEach((component) => {
+          component.setDisabled(true);
+        });
+        msg.edit({ components: [row] });
+        if (reason === "two") {
+          //TODO: uj row es stb...
+          embed.spliceFields(0, 3);
+          embed.addField("Not yet implemented", "⊙﹏⊙∥");
+          msg.edit({ embeds: [embed] });
+        }
+      });
+    } catch (e) {
+      console.error(e);
     }
   }
 
@@ -414,7 +560,10 @@ class MusicBot {
         });
 
         collector.on("end", (collected, reason) => {
-          msg.edit({ components: [] });
+          row.components.forEach((component) => {
+            component.setDisabled(true);
+          });
+          msg.edit({ components: [row] });
         });
       }
     } catch (e) {
@@ -444,6 +593,7 @@ class MusicBot {
    */
   leave() {
     this.autoplay = false;
+    this.queue = [];
     this.audioPlayer.stop(true);
     this.connection.destroy();
   }
@@ -531,12 +681,184 @@ class MusicBot {
       const embed = new Discord.MessageEmbed()
         .setColor("WHITE")
         .setTitle("**The queue is:**");
-      let queueNum = 1;
+      const maxnum = 5;
+      if (this.queue.length > maxnum) {
+        let allpages = Math.ceil(this.queue.length / maxnum);
+        let currpage = 1;
+        embed.setFooter(`Page: ${currpage}/${allpages}`);
+
+        const row = new Discord.MessageActionRow().addComponents([
+          new Discord.MessageButton()
+            .setCustomId("1")
+            .setLabel("PREVIOUS")
+            .setStyle("SUCCESS"),
+          new Discord.MessageButton()
+            .setCustomId("2")
+            .setLabel("NEXT")
+            .setStyle("SUCCESS"),
+          new Discord.MessageButton()
+            .setCustomId("X")
+            .setLabel("X")
+            .setStyle("DANGER"),
+        ]);
+
+        let index = 0;
+        for (const track of this.queue) {
+          if (index + 1 <= maxnum) {
+            embed.addField(
+              (index + 1).toString(),
+              `[${track.title}](${track.url})`
+            );
+            index++;
+          } else break;
+        }
+
+        const msg = await this.mchannel.send({
+          embeds: [embed],
+          components: [row],
+        });
+
+        const collector = msg.createMessageComponentCollector({
+          componentType: "BUTTON",
+          time: 90000,
+        });
+
+        collector.on("collect", (i) => {
+          switch (i.customId) {
+            case "1":
+              if (currpage == 1) {
+                const nolessEmbed = new Discord.MessageEmbed()
+                  .setColor("DARK_RED")
+                  .setDescription("There is no previous page!");
+                i.reply({
+                  embeds: [nolessEmbed],
+                  ephemeral: true,
+                });
+              } else {
+                allpages = Math.ceil(this.queue.length / maxnum);
+                currpage--;
+                embed.setFields([]);
+                embed.setFooter(`Page: ${currpage}/${allpages}`);
+                index = 0;
+                for (const track of this.queue) {
+                  if (
+                    index + 1 - (currpage - 1) * maxnum <= maxnum &&
+                    index + 1 - (currpage - 1) * maxnum > 0
+                  ) {
+                    embed.addField(
+                      (index + 1).toString(),
+                      `[${track.title}](${track.url})`
+                    );
+                  }
+                  index++;
+                }
+                msg.edit({ embeds: [embed] });
+                i.deferReply();
+                i.deleteReply();
+              }
+              break;
+            case "2":
+              if (currpage == allpages) {
+                const nopagesEmbed = new Discord.MessageEmbed()
+                  .setColor("DARK_RED")
+                  .setDescription("There are no more pages!");
+                i.reply({
+                  embeds: [nopagesEmbed],
+                  ephemeral: true,
+                });
+              } else {
+                allpages = Math.ceil(this.queue.length / maxnum);
+                currpage++;
+                // embed.spliceFields(0, this.queue.length - currpage * maxnum);
+                embed.setFields([]);
+                embed.setFooter(`Page: ${currpage}/${allpages}`);
+                index = 0;
+                for (const track of this.queue) {
+                  if (
+                    index + 1 - (currpage - 1) * maxnum <= maxnum &&
+                    index + 1 - (currpage - 1) * maxnum > 0
+                  ) {
+                    embed.addField(
+                      (index + 1).toString(),
+                      `[${track.title}](${track.url})`
+                    );
+                  }
+                  index++;
+                }
+                msg.edit({ embeds: [embed] });
+                i.deferReply();
+                i.deleteReply();
+              }
+              break;
+            case "X":
+              i.deferReply();
+              i.deleteReply();
+              collector.stop();
+              break;
+            default:
+              break;
+          }
+        });
+
+        collector.on("end", (collected, reason) => {
+          row.components.forEach((component) => {
+            component.setDisabled(true);
+          });
+          msg.edit({ components: [row] });
+        });
+      } else {
+        this.queue.forEach((track, index) => {
+          embed.addField(
+            (index + 1).toString(),
+            `[${track.title}](${track.url})`
+          );
+        });
+        this.mchannel.send({ embeds: [embed] });
+      }
+    }
+  }
+
+  /**
+   *
+   * @param {string} mystring
+   * @param {Boolean} isIndex
+   */
+  deleteFromQueue(mystring, isIndex = false) {
+    let deleted = Track;
+    if (isIndex) {
+      if (parseInt(mystring) <= this.queue.length && parseInt(mystring) > 0) {
+        deleted = this.queue[parseInt(mystring) - 1];
+        this.queue.splice(parseInt(mystring) - 1, 1);
+      }
+    } else {
+      let index = -1;
+      const mystring1 = mystring.toLowerCase();
+      let tracktitle = "";
       this.queue.forEach((track) => {
-        embed.addField(queueNum.toString(), `[${track.title}](${track.url})`);
-        queueNum++;
+        tracktitle = track.title.toLowerCase();
+        if (tracktitle.includes(mystring1)) {
+          if (index == -1) {
+            index = this.queue.indexOf(track);
+          }
+        }
       });
-      this.mchannel.send({ embeds: [embed] });
+      if (index != -1) {
+        deleted = this.queue[index];
+        this.queue.splice(index, 1);
+      }
+    }
+    if (deleted.title != undefined || deleted.url != undefined) {
+      this.mchannel.send({
+        embeds: [
+          new Discord.MessageEmbed()
+            .setColor("GREEN")
+            .addField(
+              "**Succesfully deleted from queue:**",
+              `[${deleted.title}](${deleted.url})`
+            )
+            .setThumbnail(deleted.thumb),
+        ],
+      });
     }
   }
 

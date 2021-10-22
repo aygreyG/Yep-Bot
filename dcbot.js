@@ -82,6 +82,10 @@ const helpEmbed2 = new Discord.MessageEmbed()
       value: "❔ Searches youtube and gives you 4 options to choose from.",
     },
     {
+      name: `${prefix}playlist <youtube playlist url>`,
+      value: "📜 Queues the given playlist."
+    },
+    {
       name: `${prefix}queue/${prefix}q`,
       value: "📃 Shows you the queue.",
     },
@@ -109,6 +113,10 @@ const helpEmbed2 = new Discord.MessageEmbed()
     {
       name: `${prefix}stop`,
       value: "⏹ Stops playback, sets autoplay to off and clears the queue.",
+    },
+    {
+      name: `${prefix}del/${prefix}delete <queue index>/<song name>`,
+      value: "💥 Deletes the song from the queue."
     }
   )
   .setFooter("Page: 2/2");
@@ -321,6 +329,45 @@ client.on("messageCreate", async (message) => {
           });
         }
         break;
+      case "playlist":
+        if (
+          !musicBot &&
+          message.member.voice.channel &&
+          message.member instanceof Discord.GuildMember
+        ) {
+          const channel = message.member.voice.channel;
+          musicBot = new MusicBot(channel, message.channel);
+          subcriptions.set(message.guildId, musicBot);
+          console.log(
+            `New musicbot set to guild: ${message.guildId} ${message.guild.name}!`
+          );
+        }
+
+        if (!subcriptions.has(message.guildId)) {
+          message.channel.send({
+            embeds: [
+              new Discord.MessageEmbed()
+                .setColor("RED")
+                .setDescription("Join a voice channel and try again!"),
+            ],
+          });
+          return;
+        }
+
+        if (args.length > 0) {
+          if (args[0].includes("www.youtube.com") && args[0].includes("list")) {
+            musicBot.playlistSearch(args[0], message.author.id);
+          } else {
+            message.channel.send({
+              embeds: [
+                new Discord.MessageEmbed()
+                  .setColor("RED")
+                  .setDescription("It is not a playlist!"),
+              ],
+            });
+          }
+        }
+        break;
       case "play":
       case "p":
         const url = args[0];
@@ -408,6 +455,16 @@ client.on("messageCreate", async (message) => {
         break;
       case "stop":
         if (musicBot) musicBot.stop();
+        break;
+      case "delete":
+      case "del":
+        if (musicBot) {
+          if (parseInt(args[0])) {
+            musicBot.deleteFromQueue(args[0], true);
+          } else {
+            musicBot.deleteFromQueue(args.join(" "), false);
+          }
+        }
         break;
       case "q":
       case "queue":
