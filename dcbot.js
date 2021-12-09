@@ -2,7 +2,6 @@ const Discord = require("discord.js");
 const { prefix, token } = require("./config.json");
 const blackjack = require("./blackjack");
 const coinflip = require("./coinflip");
-const { oneVOne } = require("./1v1");
 const { Users } = require("./dbObjects");
 const { MusicBot } = require("./music");
 const {
@@ -43,11 +42,6 @@ const helpEmbed1 = new Discord.MessageEmbed()
     {
       name: `${prefix}f/${prefix}flip <your bet> <heads/tails>`,
       value: "🪙 Flips a coin.",
-    },
-    {
-      name: `${prefix}1v1 <your opponent's tag>`,
-      value:
-        "😒👉👈😒 Challenge a user on the server, whoever guesses closer to the random number between 0-100 wins!",
     },
     {
       name: `${prefix}balance/${prefix}balance <user tag>`,
@@ -198,22 +192,6 @@ client.on("messageCreate", async (message) => {
     client.user.setActivity(`${prefix}help`, { type: "LISTENING" });
     let musicBot = subcriptions.get(message.guildId);
     switch (command) {
-      case "1v1":
-        if (args[0] !== undefined && message.mentions.users.size) {
-          if (
-            message.mentions.users.first().id !== message.author.id &&
-            !message.mentions.users.first().bot
-          ) {
-            // console.log(message.author.id + ' ' + args[0].id);
-            oneVOne(
-              message.channel,
-              currency,
-              message.author.id,
-              message.mentions.users.first().id
-            );
-          }
-        }
-        break;
       case "f":
       case "flip":
         if (

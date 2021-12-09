@@ -11,7 +11,7 @@ Meméne?*
 ### Features:
 - Database which stores user ids and their corresponding balances.
 - Music playing.
-- Blackjack and coinflip (there is also a 1v1 feature which is kinda bad).
+- Blackjack and coinflip.
 
 ### What to look out for:
 - There might be comments, commits or other things that are written in hungarian.
