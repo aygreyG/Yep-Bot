@@ -2,7 +2,6 @@ const Discord = require("discord.js");
 const { prefix, token } = require("./config.json");
 const blackjack = require("./blackjack");
 const coinflip = require("./coinflip");
-const { oneVOne } = require("./1v1");
 const { Users } = require("./dbObjects");
 const { MusicBot } = require("./music");
 const {
@@ -45,11 +44,6 @@ const helpEmbed1 = new Discord.MessageEmbed()
       value: "🪙 Flips a coin.",
     },
     {
-      name: `${prefix}1v1 <your opponent's tag>`,
-      value:
-        "😒👉👈😒 Challenge a user on the server, whoever guesses closer to the random number between 0-100 wins!",
-    },
-    {
       name: `${prefix}balance/${prefix}balance <user tag>`,
       value: "💰 Shows you your or the tagged user's balance.",
     },
@@ -82,6 +76,10 @@ const helpEmbed2 = new Discord.MessageEmbed()
       value: "❔ Searches youtube and gives you 4 options to choose from.",
     },
     {
+      name: `${prefix}playlist <youtube playlist url>`,
+      value: "📜 Queues the given playlist."
+    },
+    {
       name: `${prefix}queue/${prefix}q`,
       value: "📃 Shows you the queue.",
     },
@@ -109,6 +107,10 @@ const helpEmbed2 = new Discord.MessageEmbed()
     {
       name: `${prefix}stop`,
       value: "⏹ Stops playback, sets autoplay to off and clears the queue.",
+    },
+    {
+      name: `${prefix}del/${prefix}delete <queue index>/<song name>`,
+      value: "💥 Deletes the song from the queue."
     }
   )
   .setFooter("Page: 2/2");
@@ -190,22 +192,6 @@ client.on("messageCreate", async (message) => {
     client.user.setActivity(`${prefix}help`, { type: "LISTENING" });
     let musicBot = subcriptions.get(message.guildId);
     switch (command) {
-      case "1v1":
-        if (args[0] !== undefined && message.mentions.users.size) {
-          if (
-            message.mentions.users.first().id !== message.author.id &&
-            !message.mentions.users.first().bot
-          ) {
-            // console.log(message.author.id + ' ' + args[0].id);
-            oneVOne(
-              message.channel,
-              currency,
-              message.author.id,
-              message.mentions.users.first().id
-            );
-          }
-        }
-        break;
       case "f":
       case "flip":
         if (
@@ -312,13 +298,52 @@ client.on("messageCreate", async (message) => {
             return message.channel.send({
               content: `${message.mentions.users.first()} now has ${currency.getBalance(
                 message.mentions.users.first().id
-              )}`
+              )}`,
             });
           }
           currency.add(message.author.id, args[0]);
           message.reply({
-            content: `you now have ${currency.getBalance(message.author.id)}`
+            content: `you now have ${currency.getBalance(message.author.id)}`,
           });
+        }
+        break;
+      case "playlist":
+        if (
+          !musicBot &&
+          message.member.voice.channel &&
+          message.member instanceof Discord.GuildMember
+        ) {
+          const channel = message.member.voice.channel;
+          musicBot = new MusicBot(channel, message.channel);
+          subcriptions.set(message.guildId, musicBot);
+          console.log(
+            `New musicbot set to guild: ${message.guildId} ${message.guild.name}!`
+          );
+        }
+
+        if (!subcriptions.has(message.guildId)) {
+          message.channel.send({
+            embeds: [
+              new Discord.MessageEmbed()
+                .setColor("RED")
+                .setDescription("Join a voice channel and try again!"),
+            ],
+          });
+          return;
+        }
+
+        if (args.length > 0) {
+          if (args[0].includes("www.youtube.com") && args[0].includes("list")) {
+            musicBot.playlistSearch(args[0], message.author.id);
+          } else {
+            message.channel.send({
+              embeds: [
+                new Discord.MessageEmbed()
+                  .setColor("RED")
+                  .setDescription("It is not a playlist!"),
+              ],
+            });
+          }
         }
         break;
       case "play":
@@ -333,7 +358,9 @@ client.on("messageCreate", async (message) => {
           const channel = message.member.voice.channel;
           musicBot = new MusicBot(channel, message.channel);
           subcriptions.set(message.guildId, musicBot);
-          console.log(`New musicbot set to guild: ${message.guildId}!`);
+          console.log(
+            `New musicbot set to guild: ${message.guildId} ${message.guild.name}!`
+          );
         }
 
         if (!subcriptions.has(message.guildId)) {
@@ -365,7 +392,9 @@ client.on("messageCreate", async (message) => {
           const channel = message.member.voice.channel;
           musicBot = new MusicBot(channel, message.channel);
           subcriptions.set(message.guildId, musicBot);
-          console.log(`New musicbot set to guild: ${message.guildId}!`);
+          console.log(
+            `New musicbot set to guild: ${message.guildId} ${message.guild.name}!`
+          );
         }
 
         if (!subcriptions.has(message.guildId)) {
@@ -389,7 +418,7 @@ client.on("messageCreate", async (message) => {
       case "next":
       case "skip":
         if (musicBot) {
-          musicBot.skip();
+          musicBot.skipMusic();
         }
         break;
       case "pause":
@@ -404,6 +433,16 @@ client.on("messageCreate", async (message) => {
         break;
       case "stop":
         if (musicBot) musicBot.stop();
+        break;
+      case "delete":
+      case "del":
+        if (musicBot) {
+          if (parseInt(args[0])) {
+            musicBot.deleteFromQueue(args[0], true);
+          } else {
+            musicBot.deleteFromQueue(args.join(" "), false);
+          }
+        }
         break;
       case "q":
       case "queue":
@@ -429,6 +468,10 @@ client.on("messageCreate", async (message) => {
             ],
           });
         }
+        break;
+      case "repeat":
+      case "loop":
+        if (musicBot) musicBot.repeatChange();
         break;
       default:
     }
