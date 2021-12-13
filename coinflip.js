@@ -8,7 +8,6 @@ try {
 } catch (err) {
   // console.error(err);
   fs.writeFile("./coins.json", "{\"tails\":0,\"heads\":0}", "utf8", () => console.log("New coins.json created."));
-} finally {
   coins = {heads: 0, tails: 0};
 }
 
