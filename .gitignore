@@ -3,7 +3,7 @@ node_modules
 chat
 hello.js
 package-lock.json
-/config.json
+/config*
 nodemon.json
 database.sqlite.old
 database.sqlite
@@ -14,3 +14,4 @@ track.js
 track.ts
 info.json
 playlist.json
+tmp.png
