@@ -12,6 +12,7 @@ const {
   VoiceConnectionStatus,
 } = require("@discordjs/voice");
 const { promisify } = require("util");
+const { mcStatusCheck } = require("./mc_info");
 
 const wait = promisify(setTimeout);
 const currency = new Discord.Collection();
@@ -77,7 +78,7 @@ const helpEmbed2 = new Discord.MessageEmbed()
     },
     {
       name: `${prefix}playlist <youtube playlist url>`,
-      value: "📜 Queues the given playlist."
+      value: "📜 Queues the given playlist.",
     },
     {
       name: `${prefix}queue/${prefix}q`,
@@ -110,7 +111,7 @@ const helpEmbed2 = new Discord.MessageEmbed()
     },
     {
       name: `${prefix}del/${prefix}delete <queue index>/<song name>`,
-      value: "💥 Deletes the song from the queue."
+      value: "💥 Deletes the song from the queue.",
     }
   )
   .setFooter("Page: 2/2");
@@ -305,6 +306,21 @@ client.on("messageCreate", async (message) => {
           message.reply({
             content: `you now have ${currency.getBalance(message.author.id)}`,
           });
+          return;
+        }
+
+        if (args.length > 0) {
+          if (args[0].includes("www.youtube.com") && args[0].includes("list")) {
+            musicBot.playlistSearch(args[0], message.author.id);
+          } else {
+            message.channel.send({
+              embeds: [
+                new Discord.MessageEmbed()
+                  .setColor("RED")
+                  .setDescription("It is not a playlist!"),
+              ],
+            });
+          }
         }
         break;
       case "playlist":
@@ -472,6 +488,38 @@ client.on("messageCreate", async (message) => {
       case "repeat":
       case "loop":
         if (musicBot) musicBot.repeatChange();
+        break;
+      case "mc":
+        const status = await mcStatusCheck();
+        if (status[2]) {
+          message.reply({
+            embeds: [
+              new Discord.MessageEmbed()
+                .setColor(status[0] ? "DARK_GREEN" : "RED")
+                .setDescription(status[1])
+                .setTitle("Minecraft Server Status")
+                .setThumbnail("attachment://minecraft_logo.png"),
+            ],
+            files: [
+              {
+                attachment: "./tmp.png",
+                name: "minecraft_logo.png",
+              },
+            ],
+          });
+        } else {
+          message.reply({
+            embeds: [
+              new Discord.MessageEmbed()
+                .setColor(status[0] ? "DARK_GREEN" : "RED")
+                .setDescription(status[1])
+                .setTitle("Minecraft Server Status")
+                .setThumbnail(
+                  "https://cdn.icon-icons.com/icons2/2699/PNG/512/minecraft_logo_icon_168974.png"
+                ),
+            ],
+          });
+        }
         break;
       default:
     }
