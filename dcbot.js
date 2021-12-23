@@ -306,6 +306,21 @@ client.on("messageCreate", async (message) => {
           message.reply({
             content: `you now have ${currency.getBalance(message.author.id)}`,
           });
+          return;
+        }
+
+        if (args.length > 0) {
+          if (args[0].includes("www.youtube.com") && args[0].includes("list")) {
+            musicBot.playlistSearch(args[0], message.author.id);
+          } else {
+            message.channel.send({
+              embeds: [
+                new Discord.MessageEmbed()
+                  .setColor("RED")
+                  .setDescription("It is not a playlist!"),
+              ],
+            });
+          }
         }
         break;
       case "playlist":
