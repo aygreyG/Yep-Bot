@@ -133,7 +133,7 @@ class BlackjackGame {
   calcTableEmbed() {
     const embed = new Discord.MessageEmbed()
       .setColor("#000000")
-      .setAuthor("Yep BlackJack")
+      .setAuthor({ name: "Yep BlackJack" })
       .addField("\u200b", "\u200b")
       .addField(
         `__${this.dealer.name}__`,

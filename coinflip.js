@@ -7,9 +7,10 @@ try {
   coins = require("./coins.json");
 } catch (err) {
   // console.error(err);
-  fs.writeFile("./coins.json", "{\"tails\":0,\"heads\":0}", "utf8", () => console.log("New coins.json created."));
-} finally {
-  coins = {heads: 0, tails: 0};
+  fs.writeFile("./coins.json", '{"tails":0,"heads":0}', "utf8", () =>
+    console.log("New coins.json created.")
+  );
+  coins = { heads: 0, tails: 0 };
 }
 
 // -flip heads/tails <bet>
@@ -51,14 +52,14 @@ const flip = (message, currency, bet, headsOrTails) => {
       embeds: [
         new Discord.MessageEmbed()
           .setColor("#AFEC28")
-          .setAuthor("Yep Coinflip")
+          .setAuthor({ name: "Yep Coinflip" })
           // .attachFiles(['./fos.png'])
           .setThumbnail("https://i.imgur.com/Ol3ZXQV.png")
           .addField(
             `${headsOrTails.toUpperCase()}`,
             `${message.author} won: \`${bet}\``
           )
-          .setFooter(`Tails: ${coins.tails}, Heads: ${coins.heads}.`),
+          .setFooter({ text: `Tails: ${coins.tails}, Heads: ${coins.heads}.` }),
       ],
     });
   } else {
@@ -68,14 +69,14 @@ const flip = (message, currency, bet, headsOrTails) => {
       embeds: [
         new Discord.MessageEmbed()
           .setColor("#A00000")
-          .setAuthor("Yep Coinflip")
+          .setAuthor({ name: "Yep Coinflip" })
           // .attachFiles(['./fos.png'])
           .setThumbnail("https://i.imgur.com/Ol3ZXQV.png")
           .addField(
             `${headsOrTails == "heads" ? "TAILS" : "HEADS"}`,
             `${message.author} lost: \`${bet}\``
           )
-          .setFooter(`Tails: ${coins.tails}, Heads: ${coins.heads}.`),
+          .setFooter({ text: `Tails: ${coins.tails}, Heads: ${coins.heads}.` }),
       ],
     });
   }
