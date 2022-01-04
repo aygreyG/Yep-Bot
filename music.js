@@ -14,9 +14,7 @@ const {
 } = require("@discordjs/voice");
 const Discord = require("discord.js");
 const { getInfo } = require("ytdl-core");
-const ytdl = require("ytdl-core");
-// this is used instead of ytdl because it may be more reliable
-const { raw } = require("youtube-dl-exec");
+const { exec } = require("youtube-dl-exec");
 const ytsr = require("ytsr");
 const fs = require("fs");
 const ytpl = require("ytpl");
@@ -124,7 +122,10 @@ class MusicBot {
             let rand = Math.floor(Math.random() * 5);
             let maxtry = 15;
             while (
-              (info.related_videos[rand].title.toLowerCase().includes("live") ||
+              (info.related_videos[rand].isLive ||
+                info.related_videos[rand].title
+                  .toLowerCase()
+                  .includes("live") ||
                 info.related_videos[rand].length_seconds > 900) &&
               maxtry != 0
             ) {
@@ -224,7 +225,7 @@ class MusicBot {
    * @returns If it can't play the song.
    */
   playTrack(track) {
-    const process = raw(
+    const process = exec(
       track.url,
       {
         o: "-",
@@ -268,7 +269,7 @@ class MusicBot {
                 ),
             ],
           });
-          console.error("Playback error: \n" + error.shortMessage);
+          console.error("Playback error: \n" + error.message);
         }
         // if it was a skip it shouldn't spam to the console
         else
@@ -448,7 +449,7 @@ class MusicBot {
         if (reason === "two") {
           //TODO: uj row es stb...
           embed.spliceFields(0, 3);
-          embed.addField("Not yet implemented", "⊙﹏⊙∥");
+          embed.addField("Not yet implemented", "Sadge");
           msg.edit({ embeds: [embed] });
         }
       });
@@ -468,9 +469,12 @@ class MusicBot {
       // setting up a filter to use as a url
       const filters1 = await ytsr.getFilters(searchString);
       const filter1 = filters1.get("Type").get("Video");
-      // getting 4 videos
+      // const filters2 = await ytsr.getFilters(filter1.url);
+      // const filter2 = filters2.get("Sort by").get("View count");
+      // If you want your search to be sorted by view count, you can uncomment the previous two lines and change the ytsr url to the filter2 url.
+      // getting 15 videos
       const videos = await ytsr(filter1.url, {
-        limit: 4,
+        limit: 15,
       });
 
       // if it was a play command it should queue it automatically
@@ -487,30 +491,33 @@ class MusicBot {
           .setColor("AQUA")
           .setTitle("**Choose a song that is good for you!**");
 
-        videos.items.map((vid, index) => {
-          searchEmbed.addField(
-            (index + 1).toString(),
-            `[${vid.title}](${vid.url})`
-          );
+        let mindex = 0;
+        let notLiveVideos = [];
+        videos.items.some((vid) => {
+          if (!vid.isLive && !vid.isUpcoming) {
+            const dur = vid.duration.split(":");
+            if (dur.length == 3 && parseInt(dur[0]) > 3) {
+              return;
+            }
+            searchEmbed.addField(
+              (++mindex).toString(),
+              `[${vid.title}](${vid.url})`
+            );
+            notLiveVideos.push(vid);
+          }
+          if (mindex === 4) return true;
         });
 
-        const row = new Discord.MessageActionRow().addComponents([
-          new Discord.MessageButton()
-            .setCustomId("1")
-            .setLabel("1")
-            .setStyle("PRIMARY"),
-          new Discord.MessageButton()
-            .setCustomId("2")
-            .setLabel("2")
-            .setStyle("PRIMARY"),
-          new Discord.MessageButton()
-            .setCustomId("3")
-            .setLabel("3")
-            .setStyle("PRIMARY"),
-          new Discord.MessageButton()
-            .setCustomId("4")
-            .setLabel("4")
-            .setStyle("PRIMARY"),
+        const row = new Discord.MessageActionRow();
+        for (let i = 1; i <= mindex; i++) {
+          row.addComponents([
+            new Discord.MessageButton()
+              .setCustomId(String(i))
+              .setLabel(String(i))
+              .setStyle("PRIMARY"),
+          ]);
+        }
+        row.addComponents([
           new Discord.MessageButton()
             .setCustomId("X")
             .setLabel("X")
@@ -539,9 +546,9 @@ class MusicBot {
               default:
                 const num = parseInt(i.customId) - 1;
                 const track = new Track(
-                  videos.items[num].url,
-                  videos.items[num].title,
-                  videos.items[num].bestThumbnail.url
+                  notLiveVideos[num].url,
+                  notLiveVideos[num].title,
+                  notLiveVideos[num].bestThumbnail.url
                 );
                 this.enqueue(track);
                 const playEmbed = new Discord.MessageEmbed()
@@ -568,6 +575,12 @@ class MusicBot {
       }
     } catch (e) {
       console.error(e);
+      const errEmbed = new Discord.MessageEmbed()
+        .setColor("RED")
+        .setDescription(
+          "Couldn't find music, or there was an error looking it up."
+        );
+      this.mchannel.send({ embeds: [errEmbed] });
     }
   }
 
