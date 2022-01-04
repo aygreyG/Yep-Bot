@@ -24,7 +24,7 @@ try {
 } catch (err) {
   const fs = require("fs");
   try {
-    fs.writeFileSync("./config2.json", "{\n\t\"prefix\": \"your-prefix\",\n\t\"token\": \"your-token\",\n\t\"minecraftIp\": \"your-ip(optional)\",\n\t\"minecraftPort\": \"your-port(optional)\"\n}","utf-8");
+    fs.writeFileSync("./config.json", "{\n\t\"prefix\": \"your-prefix\",\n\t\"token\": \"your-token\",\n\t\"minecraftIp\": \"your-ip(optional)\",\n\t\"minecraftPort\": \"your-port(optional)\"\n}","utf-8");
     console.log("Config.json created successfully. PLEASE UPDATE CONFIG.JSON BEFORE STARTING THE BOT!");
   } catch (e) {
     console.error(e);

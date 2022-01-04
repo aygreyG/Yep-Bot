@@ -57,7 +57,9 @@ const helpEmbed1 = new Discord.MessageEmbed()
       value: "🏓 Pings the bot, if it's available it will answer.",
     }
   )
-  .setFooter("Page: 1/2");
+  .setFooter({
+    text: "Page: 1/2",
+  });
 
 const helpEmbed2 = new Discord.MessageEmbed()
   .setColor("#ADE9F2")
@@ -114,7 +116,9 @@ const helpEmbed2 = new Discord.MessageEmbed()
       value: "💥 Deletes the song from the queue.",
     }
   )
-  .setFooter("Page: 2/2");
+  .setFooter({
+    text: "Page: 2/2",
+  });
 
 /* add metódus hozzáadása currencyhez */
 
