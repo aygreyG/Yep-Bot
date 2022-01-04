@@ -22,6 +22,7 @@ Meméne?*
 ### Dependencies:
 - Nodejs version: 16 and up
 - Discordjs version: v13
+- Build-essentials and python3
 - General:
     - discord.js
     - sequelize
