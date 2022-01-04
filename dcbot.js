@@ -55,6 +55,10 @@ const helpEmbed1 = new Discord.MessageEmbed()
     {
       name: `${prefix}ping`,
       value: "🏓 Pings the bot, if it's available it will answer.",
+    },
+    {
+      name: `${prefix}mc`,
+      value: "🟩 Gets information about the minecraft server that is tied to this bot.",
     }
   )
   .setFooter({
