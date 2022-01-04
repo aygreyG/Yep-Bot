@@ -698,7 +698,7 @@ class MusicBot {
       if (this.queue.length > maxnum) {
         let allpages = Math.ceil(this.queue.length / maxnum);
         let currpage = 1;
-        embed.setFooter(`Page: ${currpage}/${allpages}`);
+        embed.setFooter({ text: `Page: ${currpage}/${allpages}` });
 
         const row = new Discord.MessageActionRow().addComponents([
           new Discord.MessageButton()
@@ -751,7 +751,7 @@ class MusicBot {
                 allpages = Math.ceil(this.queue.length / maxnum);
                 currpage--;
                 embed.setFields([]);
-                embed.setFooter(`Page: ${currpage}/${allpages}`);
+                embed.setFooter({ text: `Page: ${currpage}/${allpages}` });
                 index = 0;
                 for (const track of this.queue) {
                   if (
@@ -784,7 +784,7 @@ class MusicBot {
                 currpage++;
                 // embed.spliceFields(0, this.queue.length - currpage * maxnum);
                 embed.setFields([]);
-                embed.setFooter(`Page: ${currpage}/${allpages}`);
+                embed.setFooter({ text: `Page: ${currpage}/${allpages}` });
                 index = 0;
                 for (const track of this.queue) {
                   if (
