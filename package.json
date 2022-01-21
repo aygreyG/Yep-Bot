@@ -17,7 +17,6 @@
     "minecraft-server-util": "^5.1.2",
     "sequelize": "^6.6.5",
     "sqlite3": "4.2.0",
-    "youtube-dl-exec": "1.2.6",
     "ytdl-core": "^4.9.1",
     "youtube-dl-exec": "^2.0.2",
     "ytpl": "^2.2.3",
