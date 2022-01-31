@@ -291,7 +291,8 @@ class MusicBot {
       if (info) {
         // console.log("eljut ide");
         // fs.writeFile("./info.json","Data\n" + JSON.stringify(info.videoDetails), "utf8",() => console.log("Written to info file!"));
-        if (info.videoDetails.isLiveContent) {
+        
+        if (info.videoDetails.isLiveContent && info.videoDetails.liveBroadcastDetails.isLiveNow) {
           this.mchannel.send({
             embeds: [
               new Discord.MessageEmbed()
@@ -301,6 +302,7 @@ class MusicBot {
           });
           return;
         }
+
         const track = new Track(
           url,
           info.videoDetails.title,
