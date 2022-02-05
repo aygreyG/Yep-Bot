@@ -18,12 +18,12 @@ const { exec } = require("youtube-dl-exec");
 const ytsr = require("ytsr");
 const fs = require("fs");
 const ytpl = require("ytpl");
-
+const { progressEmote } = require("./config.json");
 // let counter = 0;
 
-//the number of segments on the "currently playing song" embed, default is 25
-const playerSegments = 25;
-//the number of seconds the player embed updates, default is 1250
+//the number of segments on the "currently playing song" embed progressbar, default is 18
+const playerSegments = 18;
+//the number of milliseconds the player embed updates, default is 1250
 const updateTime = 1250;
 
 const toLengthSeconds = (stringduration) => {
@@ -965,14 +965,22 @@ class MusicBot {
         this.audioPlayer.state.resource.playbackDuration / 1000;
       const allLength = this.audioPlayer.state.resource.metadata.length;
       const iconNum = parseInt((currentLength / allLength) * playerSegments);
-      let playerString = "∭ ";
-      for (let i = 0; i < iconNum; i++) {
-        playerString += "■";
+      // let playerString = "∭ ";
+      let playerString = "";
+      for (let i = 0; i < playerSegments; i++) {
+        if (i === iconNum || (i === 0 && iconNum === 0)) {
+          playerString += progressEmote;
+        } else {
+          playerString += "▬";
+        }
       }
-      for (let i = 0; i < playerSegments - iconNum; i++) {
-        playerString += "□";
-      }
-      playerString += " ∭";
+      // for (let i = 0; i < iconNum; i++) {
+      //   playerString += "■";
+      // }
+      // for (let i = 0; i < playerSegments - iconNum; i++) {
+      //   playerString += "□";
+      // }
+      // playerString += " ∭";
       this.playerEmbed = await this.mchannel.send({
         embeds: [
           new Discord.MessageEmbed()
@@ -1010,14 +1018,22 @@ class MusicBot {
           this.audioPlayer.state.resource.playbackDuration / 1000;
         const allLength = this.audioPlayer.state.resource.metadata.length;
         const iconNum = parseInt((currentLength / allLength) * playerSegments);
-        let playerString = "∭ ";
-        for (let i = 0; i < iconNum; i++) {
-          playerString += "■";
+        // let playerString = "∭ ";
+        let playerString = "";
+        for (let i = 0; i < playerSegments; i++) {
+          if (i === iconNum || (i === 0 && iconNum === 0)) {
+            playerString += progressEmote;
+          } else {
+            playerString += "▬";
+          }
         }
-        for (let i = 0; i < playerSegments - iconNum; i++) {
-          playerString += "□";
-        }
-        playerString += " ∭";
+        // for (let i = 0; i < iconNum; i++) {
+        //   playerString += "■";
+        // }
+        // for (let i = 0; i < playerSegments - iconNum; i++) {
+        //   playerString += "□";
+        // }
+        // playerString += " ∭";
         this.playerEmbed.edit({
           embeds: [
             new Discord.MessageEmbed()
