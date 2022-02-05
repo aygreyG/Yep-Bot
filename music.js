@@ -19,15 +19,43 @@ const ytsr = require("ytsr");
 const fs = require("fs");
 const ytpl = require("ytpl");
 
+// let counter = 0;
+
+//the number of segments on the "currently playing song" embed, default is 25
+const playerSegments = 25;
+//the number of seconds the player embed updates, default is 1250
+const updateTime = 1250;
+
+const toLengthSeconds = (stringduration) => {
+  const lengtharray = stringduration.split(":");
+  if (lengtharray.length > 3) return -1;
+  let length = 0;
+  for (let i = 0; i < lengtharray.length; i++) {
+    length += parseInt(lengtharray[i]) * 60 ** (lengtharray.length - 1 - i);
+  }
+  return length;
+};
+
+const toDurationString = (length, strlength = 0) => {
+  if (length === -1) return "-1";
+  const date = new Date(length * 1000).toUTCString().split(" ")[4];
+  if (parseInt(date.split(":")[0]) > 0 || strlength === 3) {
+    return date;
+  } else if (parseInt(date.split(":")[1]) > 0 || strlength === 2) {
+    return date.slice(3);
+  } else return date.slice(6);
+};
+
 /**
  * Class of the Track implementation.
  * It stores the url, title and thumbnail of the video.
  */
 class Track {
-  constructor(url, title, thumb) {
+  constructor(url, title, thumb, length = -1) {
     this.url = url;
     this.title = title;
     this.thumb = thumb;
+    this.length = length;
   }
 }
 
@@ -62,6 +90,8 @@ class MusicBot {
     this.autoplay = false;
     this.repeat = false;
     this.skip = false;
+    this.playerEmbed = undefined;
+    this.myinterval = undefined;
 
     // this.connection.on('stateChange', (oldState, newState) => {
     //   console.log(`Connection transitioned from ${oldState.status} to ${newState.status}`);
@@ -86,13 +116,16 @@ class MusicBot {
         this.skip = false;
       }
       if (newState.status == AudioPlayerStatus.Idle) {
+        clearInterval(this.myinterval);
+        this.myinterval = undefined;
         // console.log(oldState.status + "\n" + this.repeat + "  " + this.skip);
         if (this.repeat && !this.skip) {
           if (oldState.status == AudioPlayerStatus.Playing) {
             const track = new Track(
               oldState.resource.metadata.url,
               oldState.resource.metadata.title,
-              oldState.resource.metadata.thumb
+              oldState.resource.metadata.thumb,
+              oldState.resource.metadata.length
             );
 
             this.playTrack(track);
@@ -137,7 +170,8 @@ class MusicBot {
               info.related_videos[rand].title,
               info.related_videos[rand].thumbnails[
                 info.related_videos[rand].thumbnails.length - 1
-              ].url
+              ].url,
+              info.related_videos[rand].length_seconds
             );
 
             this.playTrack(track);
@@ -249,16 +283,24 @@ class MusicBot {
                 title: track.title,
                 url: track.url,
                 thumb: track.thumb,
+                length: track.length,
               },
               inputType: probe.type,
             });
             this.audioPlayer.play(resource);
+            setTimeout(() => this.currentlyPlaying(), 2500);
           })
-          .catch(console.error);
+          .catch((error) => {
+            console.log(error);
+            clearInterval(this.myinterval);
+            this.myinterval = undefined;
+          });
       })
       .catch((error) => {
         // if it wasn't a skip then it should send a message to let people know
         if (!error.shortMessage.includes("ERR_STREAM_PREMATURE_CLOSE")) {
+          clearInterval(this.myinterval);
+          this.myinterval = undefined;
           this.mchannel.send({
             embeds: [
               new Discord.MessageEmbed()
@@ -272,10 +314,13 @@ class MusicBot {
           console.error("Playback error: \n" + error.message);
         }
         // if it was a skip it shouldn't spam to the console
-        else
+        else {
+          clearInterval(this.myinterval);
+          this.myinterval = undefined;
           console.error(
             `Guild name: ${this.channel.guild.name}. Error in stream process(probably skipped or stopped)`
           );
+        }
       });
   }
 
@@ -291,8 +336,11 @@ class MusicBot {
       if (info) {
         // console.log("eljut ide");
         // fs.writeFile("./info.json","Data\n" + JSON.stringify(info.videoDetails), "utf8",() => console.log("Written to info file!"));
-        
-        if (info.videoDetails.isLiveContent && info.videoDetails.liveBroadcastDetails.isLiveNow) {
+
+        if (
+          info.videoDetails.isLiveContent &&
+          info.videoDetails.liveBroadcastDetails.isLiveNow
+        ) {
           this.mchannel.send({
             embeds: [
               new Discord.MessageEmbed()
@@ -308,7 +356,8 @@ class MusicBot {
           info.videoDetails.title,
           info.videoDetails.thumbnails[
             info.videoDetails.thumbnails.length - 1
-          ].url
+          ].url,
+          info.videoDetails.lengthSeconds
         );
         this.enqueue(track);
       }
@@ -398,7 +447,8 @@ class MusicBot {
                     new Track(
                       item.url.split("&list")[0],
                       item.title,
-                      item.bestThumbnail.url
+                      item.bestThumbnail.url,
+                      item.durationSec
                     ),
                     false
                   );
@@ -411,7 +461,8 @@ class MusicBot {
                       new Track(
                         item.url.split("&list")[0],
                         item.title,
-                        item.bestThumbnail.url
+                        item.bestThumbnail.url,
+                        item.durationSec
                       ),
                       false
                     );
@@ -421,7 +472,8 @@ class MusicBot {
                       new Track(
                         item.url.split("&list")[0],
                         item.title,
-                        item.bestThumbnail.url
+                        item.bestThumbnail.url,
+                        item.durationSec
                       )
                     );
                   }
@@ -484,7 +536,8 @@ class MusicBot {
         const track = new Track(
           videos.items[0].url,
           videos.items[0].title,
-          videos.items[0].bestThumbnail.url
+          videos.items[0].bestThumbnail.url,
+          toLengthSeconds(videos.items[0].duration)
         );
         this.enqueue(track);
         // if it was a search it should give you options to choose from (now it is 4 options)
@@ -550,7 +603,8 @@ class MusicBot {
                 const track = new Track(
                   notLiveVideos[num].url,
                   notLiveVideos[num].title,
-                  notLiveVideos[num].bestThumbnail.url
+                  notLiveVideos[num].bestThumbnail.url,
+                  toLengthSeconds(notLiveVideos[num].duration)
                 );
                 this.enqueue(track);
                 const playEmbed = new Discord.MessageEmbed()
@@ -899,6 +953,90 @@ class MusicBot {
         ],
       });
       this.repeat = true;
+    }
+  }
+
+  async currentlyPlaying() {
+    if (
+      this.audioPlayer.state.status === AudioPlayerStatus.Paused ||
+      this.audioPlayer.state.status === AudioPlayerStatus.Playing
+    ) {
+      const currentLength =
+        this.audioPlayer.state.resource.playbackDuration / 1000;
+      const allLength = this.audioPlayer.state.resource.metadata.length;
+      const iconNum = parseInt((currentLength / allLength) * playerSegments);
+      let playerString = "∭ ";
+      for (let i = 0; i < iconNum; i++) {
+        playerString += "■";
+      }
+      for (let i = 0; i < playerSegments - iconNum; i++) {
+        playerString += "□";
+      }
+      playerString += " ∭";
+      this.playerEmbed = await this.mchannel.send({
+        embeds: [
+          new Discord.MessageEmbed()
+            .setColor("WHITE")
+            .setThumbnail(this.audioPlayer.state.resource.metadata.thumb)
+            .addField(
+              "Currently Playing:",
+              `[${this.audioPlayer.state.resource.metadata.title}](${this.audioPlayer.state.resource.metadata.url})`
+            )
+            .addField(
+              "\u200b",
+              `${toDurationString(
+                currentLength,
+                toDurationString(allLength).split(":").length
+              )}/${toDurationString(allLength)}     ${playerString}`
+            ),
+        ],
+      });
+      if (!this.myinterval) {
+        this.myinterval = setInterval(() => {
+          // console.log("Updating stuff..." + counter++);
+          this.updatePlayerEmbed();
+        }, updateTime);
+      }
+    }
+  }
+
+  updatePlayerEmbed() {
+    if (this.playerEmbed) {
+      if (
+        this.audioPlayer.state.status === AudioPlayerStatus.Paused ||
+        this.audioPlayer.state.status === AudioPlayerStatus.Playing
+      ) {
+        const currentLength =
+          this.audioPlayer.state.resource.playbackDuration / 1000;
+        const allLength = this.audioPlayer.state.resource.metadata.length;
+        const iconNum = parseInt((currentLength / allLength) * playerSegments);
+        let playerString = "∭ ";
+        for (let i = 0; i < iconNum; i++) {
+          playerString += "■";
+        }
+        for (let i = 0; i < playerSegments - iconNum; i++) {
+          playerString += "□";
+        }
+        playerString += " ∭";
+        this.playerEmbed.edit({
+          embeds: [
+            new Discord.MessageEmbed()
+              .setColor("WHITE")
+              .setThumbnail(this.audioPlayer.state.resource.metadata.thumb)
+              .addField(
+                "Currently Playing:",
+                `[${this.audioPlayer.state.resource.metadata.title}](${this.audioPlayer.state.resource.metadata.url})`
+              )
+              .addField(
+                "\u200b",
+                `${toDurationString(
+                  currentLength,
+                  toDurationString(allLength).split(":").length
+                )}/${toDurationString(allLength)}     ${playerString}`
+              ),
+          ],
+        });
+      }
     }
   }
 }

@@ -490,6 +490,10 @@ client.on("messageCreate", async (message) => {
       case "loop":
         if (musicBot) musicBot.repeatChange();
         break;
+      case "c":
+      case "current":
+        if (musicBot) musicBot.currentlyPlaying();
+        break;
       case "mc":
         const status = await mcStatusCheck();
         if (status[2]) {
