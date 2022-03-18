@@ -25,15 +25,20 @@ const { progressEmote } = require("./config.json");
 const playerSegments = 18;
 //the number of milliseconds the player embed updates, default is 1250
 const updateTime = 1250;
+//the maximum length a searched song can be, default is "03:15:00"
+const maxLength = "03:15:00";
 
 const toLengthSeconds = (stringduration) => {
-  const lengtharray = stringduration.split(":");
-  if (lengtharray.length > 3) return -1;
-  let length = 0;
-  for (let i = 0; i < lengtharray.length; i++) {
-    length += parseInt(lengtharray[i]) * 60 ** (lengtharray.length - 1 - i);
+  if (stringduration) {
+    const lengtharray = stringduration.split(":");
+    if (lengtharray.length > 3) return -1;
+    let length = 0;
+    for (let i = 0; i < lengtharray.length; i++) {
+      length += parseInt(lengtharray[i]) * 60 ** (lengtharray.length - 1 - i);
+    }
+    return length;
   }
-  return length;
+  return -1;
 };
 
 const toDurationString = (length, strlength = 0) => {
@@ -146,6 +151,7 @@ class MusicBot {
             ],
           });
         } else if (this.autoplay) {
+          // TODO: Making it smarter
           // if it was playing and there is no more song in the queue,
           // then it gets the last song's related_videos and creates a new track
           // (tries 15 times to find a track from the first 6 videos
@@ -533,13 +539,25 @@ class MusicBot {
 
       // if it was a play command it should queue it automatically
       if (videos.items.length > 0 && queueIt) {
-        const track = new Track(
-          videos.items[0].url,
-          videos.items[0].title,
-          videos.items[0].bestThumbnail.url,
-          toLengthSeconds(videos.items[0].duration)
-        );
-        this.enqueue(track);
+        // fs.writeFile("./stuff.json", JSON.stringify(videos), "utf8", ()=>{});
+        for (let i = 0; i < 15; i++) {
+          // It has to be a an already finished live or normal video
+          // and it has to be less than 3 hours and 15 minutes long
+          if (
+            videos.items[i].duration &&
+            toLengthSeconds(videos.items[i].duration) <
+              toLengthSeconds(maxLength)
+          ) {
+            const track = new Track(
+              videos.items[i].url,
+              videos.items[i].title,
+              videos.items[i].bestThumbnail.url,
+              toLengthSeconds(videos.items[i].duration)
+            );
+            this.enqueue(track);
+            break;
+          }
+        }
         // if it was a search it should give you options to choose from (now it is 4 options)
       } else if (videos.items.length > 0 && !queueIt && id != undefined) {
         const searchEmbed = new Discord.MessageEmbed()
@@ -549,11 +567,10 @@ class MusicBot {
         let mindex = 0;
         let notLiveVideos = [];
         videos.items.some((vid) => {
-          if (!vid.isLive && !vid.isUpcoming) {
-            const dur = vid.duration.split(":");
-            if (dur.length == 3 && parseInt(dur[0]) > 3) {
-              return;
-            }
+          if (
+            vid.duration &&
+            toLengthSeconds(vid.duration) < toLengthSeconds(maxLength)
+          ) {
             searchEmbed.addField(
               (++mindex).toString(),
               `[${vid.title}](${vid.url})`
@@ -956,6 +973,19 @@ class MusicBot {
     }
   }
 
+  calcPlayerString(currentLength, allLength) {
+    const iconNum = parseInt((currentLength / allLength) * playerSegments);
+    let playerString = "";
+    for (let i = 0; i < playerSegments; i++) {
+      if (i === iconNum || (i === 0 && iconNum === 0)) {
+        playerString += progressEmote;
+      } else {
+        playerString += "▬";
+      }
+    }
+    return playerString;
+  }
+
   async currentlyPlaying() {
     if (
       this.audioPlayer.state.status === AudioPlayerStatus.Paused ||
@@ -964,23 +994,7 @@ class MusicBot {
       const currentLength =
         this.audioPlayer.state.resource.playbackDuration / 1000;
       const allLength = this.audioPlayer.state.resource.metadata.length;
-      const iconNum = parseInt((currentLength / allLength) * playerSegments);
-      // let playerString = "∭ ";
-      let playerString = "";
-      for (let i = 0; i < playerSegments; i++) {
-        if (i === iconNum || (i === 0 && iconNum === 0)) {
-          playerString += progressEmote;
-        } else {
-          playerString += "▬";
-        }
-      }
-      // for (let i = 0; i < iconNum; i++) {
-      //   playerString += "■";
-      // }
-      // for (let i = 0; i < playerSegments - iconNum; i++) {
-      //   playerString += "□";
-      // }
-      // playerString += " ∭";
+      const playerString = this.calcPlayerString(currentLength, allLength);
       this.playerEmbed = await this.mchannel.send({
         embeds: [
           new Discord.MessageEmbed()
@@ -1017,16 +1031,7 @@ class MusicBot {
         const currentLength =
           this.audioPlayer.state.resource.playbackDuration / 1000;
         const allLength = this.audioPlayer.state.resource.metadata.length;
-        const iconNum = parseInt((currentLength / allLength) * playerSegments);
-        // let playerString = "∭ ";
-        let playerString = "";
-        for (let i = 0; i < playerSegments; i++) {
-          if (i === iconNum || (i === 0 && iconNum === 0)) {
-            playerString += progressEmote;
-          } else {
-            playerString += "▬";
-          }
-        }
+        const playerString = this.calcPlayerString(currentLength, allLength);
         // for (let i = 0; i < iconNum; i++) {
         //   playerString += "■";
         // }

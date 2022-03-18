@@ -24,8 +24,19 @@ try {
 } catch (err) {
   const fs = require("fs");
   try {
-    fs.writeFileSync("./config.json", "{\n\t\"prefix\": \"your-prefix\",\n\t\"token\": \"your-token\",\n\t\"minecraftIp\": \"your-ip(optional)\",\n\t\"minecraftPort\": \"your-port(optional)\",\n\t\"progressEmote\": \"🔘\"\n}","utf-8");
-    console.log("Config.json created successfully. PLEASE UPDATE CONFIG.JSON BEFORE STARTING THE BOT!");
+    fs.writeFile(
+      "./config.json",
+      '{\n\t"prefix": "your-prefix",\n\t"token": "your-token",\n\t"minecraftIp": "your-ip(optional)",\n\t"minecraftPort": "your-port(optional)",\n\t"progressEmote": "🔘"\n}',
+      "utf-8",
+      () => {
+        console.log(
+          "Config.json created successfully. PLEASE UPDATE CONFIG.JSON BEFORE STARTING THE BOT!"
+        );
+      }
+    );
+    fs.writeFile("./coins.json", '{"tails":0,"heads":0}', "utf8", () =>
+      console.log("New coins.json created.")
+    );
   } catch (e) {
     console.error(e);
   }
