@@ -58,7 +58,8 @@ const helpEmbed1 = new Discord.MessageEmbed()
     },
     {
       name: `${prefix}mc`,
-      value: "🟩 Gets information about the minecraft server that is tied to this bot.",
+      value:
+        "🟩 Gets information about the minecraft server that is tied to this bot.",
     }
   )
   .setFooter({
@@ -156,6 +157,7 @@ Reflect.defineProperty(currency, "add", {
       return user.save();
     }
     const newUser = await Users.create({ user_id: id, balance: amount });
+    // console.log(amount);
     currency.set(id, newUser);
     console.log("new user created: " + newUser.user_id);
     return newUser;
@@ -165,12 +167,12 @@ Reflect.defineProperty(currency, "add", {
 /* getBalance metódus hozzáadása currencyhez */
 
 Reflect.defineProperty(currency, "getBalance", {
-  value: function getBalance(id) {
+  value: async function getBalance(id) {
     const user = currency.get(id);
     if (user) {
       return user.balance;
     }
-    currency.add(id, 100);
+    await currency.add(id, 100);
     return 100;
   },
 });
@@ -205,11 +207,12 @@ client.on("messageCreate", async (message) => {
       case "flip":
         if (
           (parseInt(args[0]) > 0 &&
-            parseInt(args[0]) <= currency.getBalance(message.author.id) &&
+            parseInt(args[0]) <=
+              (await currency.getBalance(message.author.id)) &&
             (args[1].toLowerCase() == "tails" ||
               args[1].toLowerCase() == "heads")) ||
           (parseInt(args[0]) == 1 &&
-            currency.getBalance(message.author.id) <= 0 &&
+            (await currency.getBalance(message.author.id)) <= 0 &&
             (args[1].toLowerCase() == "tails" ||
               args[1].toLowerCase() == "heads"))
         ) {
@@ -221,11 +224,12 @@ client.on("messageCreate", async (message) => {
           );
         } else if (
           (parseInt(args[1]) > 0 &&
-            parseInt(args[1]) <= currency.getBalance(message.author.id) &&
+            parseInt(args[1]) <=
+              (await currency.getBalance(message.author.id)) &&
             (args[0].toLowerCase() == "tails" ||
               args[0].toLowerCase() == "heads")) ||
           (parseInt(args[1]) == 1 &&
-            currency.getBalance(message.author.id) <= 0 &&
+            (await currency.getBalance(message.author.id)) <= 0 &&
             (args[0].toLowerCase() == "tails" ||
               args[0].toLowerCase() == "heads"))
         ) {
@@ -275,7 +279,7 @@ client.on("messageCreate", async (message) => {
               new Discord.MessageEmbed()
                 .setColor("DARK_ORANGE")
                 .setDescription(
-                  `${message.mentions.users.first()} has: ${currency.getBalance(
+                  `${message.mentions.users.first()} has: ${await currency.getBalance(
                     message.mentions.users.first().id
                   )}`
                 ),
@@ -287,7 +291,7 @@ client.on("messageCreate", async (message) => {
               new Discord.MessageEmbed()
                 .setColor("DARK_ORANGE")
                 .setDescription(
-                  `${message.author}, you have: ${currency.getBalance(
+                  `${message.author}, you have: ${await currency.getBalance(
                     message.author.id
                   )}`
                 ),
@@ -315,20 +319,6 @@ client.on("messageCreate", async (message) => {
             content: `you now have ${currency.getBalance(message.author.id)}`,
           });
           return;
-        }
-
-        if (args.length > 0) {
-          if (args[0].includes("www.youtube.com") && args[0].includes("list")) {
-            musicBot.playlistSearch(args[0], message.author.id);
-          } else {
-            message.channel.send({
-              embeds: [
-                new Discord.MessageEmbed()
-                  .setColor("RED")
-                  .setDescription("It is not a playlist!"),
-              ],
-            });
-          }
         }
         break;
       case "playlist":
@@ -398,7 +388,10 @@ client.on("messageCreate", async (message) => {
           return;
         }
 
-        if (url && url.includes("https://www.youtube.com")) {
+        if (
+          url &&
+          (url.includes("www.youtube.com") || url.includes("youtu.be"))
+        ) {
           musicBot.playUrl(url);
         } else if (args.length > 0) {
           const searchString = args.join(" ");
@@ -496,6 +489,10 @@ client.on("messageCreate", async (message) => {
       case "repeat":
       case "loop":
         if (musicBot) musicBot.repeatChange();
+        break;
+      case "c":
+      case "current":
+        if (musicBot) musicBot.currentlyPlaying();
         break;
       case "mc":
         const status = await mcStatusCheck();

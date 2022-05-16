@@ -146,7 +146,8 @@ class BlackjackGame {
             } & Something\n**Value:**  \`${Cards[this.dealer.card[0]].value}\``
       )
       .setThumbnail(
-        "https://www.seekpng.com/png/full/819-8194226_blackjack-instant-game-logo-graphic-design.png"
+        // "https://www.seekpng.com/png/full/819-8194226_blackjack-instant-game-logo-graphic-design.png" <-- not working properly
+        "https://cdn-icons-png.flaticon.com/512/1983/1983632.png"
       );
 
     for (const player of this.players) {
@@ -345,15 +346,14 @@ const hitStart = async (b, channel, player, currency) => {
 const delay = (n) => new Promise((r) => setTimeout(r, n * 1000));
 
 const bet = async (player, channel, currency) => {
-  const indebt = currency.getBalance(player.id) <= 0;
+  const money = await currency.getBalance(player.id);
+  const indebt = money <= 0;
   let string =
     `<@${player.id}> ` +
     "Give me a bet😠👇NOW! with '" +
     prefix +
     "bet <amount>'" +
-    ` You currently have: ${currency.getBalance(
-      player.id
-    )}, if you bet more than you have then it won't do anything!`;
+    ` You currently have: ${money}, if you bet more than you have then it won't do anything!`;
   if (indebt) {
     string = `<@${player.id}> you don't have money, so you can only bet 1, with \`${prefix}bet 1\`!`;
   }
@@ -367,8 +367,7 @@ const bet = async (player, channel, currency) => {
       return (
         m.content.startsWith(`${prefix}bet`) &&
         m.author.id === player.id &&
-        ((parseInt(m.content.slice(4).trim()) <=
-          currency.getBalance(player.id) &&
+        ((parseInt(m.content.slice(4).trim()) <= money &&
           parseInt(m.content.slice(4).trim()) > 0) ||
           (parseInt(m.content.slice(4).trim()) == 1 && indebt))
       );
@@ -380,9 +379,9 @@ const bet = async (player, channel, currency) => {
       time: 10000,
     });
 
-    collector.on("collect", (mess) => {
+    collector.on("collect", async (mess) => {
       player.bet = parseInt(mess.content.slice(4).trim());
-      currency.add(player.id, -player.bet);
+      await currency.add(player.id, -player.bet);
       console.log(`${player.name}'s bet: ${player.bet}`);
 
       const betreply = new Discord.MessageEmbed()
@@ -390,6 +389,7 @@ const bet = async (player, channel, currency) => {
         .setDescription(`<@${player.id}> your bet: ${player.bet}`);
 
       mess.channel.send({ embeds: [betreply] });
+      resolve();
     });
 
     collector.on("end", (collected, reason) => {

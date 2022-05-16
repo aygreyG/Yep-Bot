@@ -19,7 +19,14 @@
     "sqlite3": "4.2.0",
     "ytdl-core": "^4.9.1",
     "youtube-dl-exec": "^2.0.2",
+    "ytdl-core": "^4.11.0",
     "ytpl": "^2.2.3",
     "ytsr": "^3.5.3"
+  },
+  "nodemonConfig": {
+    "ignore": [
+      "coins.json",
+      "database.sqlite"
+    ]
   }
 }

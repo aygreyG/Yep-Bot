@@ -18,16 +18,49 @@ const { exec } = require("youtube-dl-exec");
 const ytsr = require("ytsr");
 const fs = require("fs");
 const ytpl = require("ytpl");
+const { progressEmote } = require("./config.json");
+// let counter = 0;
+
+//the number of segments on the "currently playing song" embed progressbar, default is 18
+const playerSegments = 18;
+//the number of milliseconds the player embed updates, default is 1250
+const updateTime = 1250;
+//the maximum length a searched song can be, default is "03:15:00"
+const maxLength = "03:15:00";
+
+const toLengthSeconds = (stringduration) => {
+  if (stringduration) {
+    const lengtharray = stringduration.split(":");
+    if (lengtharray.length > 3) return -1;
+    let length = 0;
+    for (let i = 0; i < lengtharray.length; i++) {
+      length += parseInt(lengtharray[i]) * 60 ** (lengtharray.length - 1 - i);
+    }
+    return length;
+  }
+  return -1;
+};
+
+const toDurationString = (length, strlength = 0) => {
+  if (length === -1) return "-1";
+  const date = new Date(length * 1000).toUTCString().split(" ")[4];
+  if (parseInt(date.split(":")[0]) > 0 || strlength === 3) {
+    return date;
+  } else if (parseInt(date.split(":")[1]) > 0 || strlength === 2) {
+    return date.slice(3);
+  } else return date.slice(6);
+};
 
 /**
  * Class of the Track implementation.
  * It stores the url, title and thumbnail of the video.
  */
 class Track {
-  constructor(url, title, thumb) {
+  constructor(url, title, thumb, length = -1) {
     this.url = url;
     this.title = title;
     this.thumb = thumb;
+    this.length = length;
   }
 }
 
@@ -62,6 +95,8 @@ class MusicBot {
     this.autoplay = false;
     this.repeat = false;
     this.skip = false;
+    this.playerEmbed = undefined;
+    this.myinterval = undefined;
 
     // this.connection.on('stateChange', (oldState, newState) => {
     //   console.log(`Connection transitioned from ${oldState.status} to ${newState.status}`);
@@ -86,13 +121,16 @@ class MusicBot {
         this.skip = false;
       }
       if (newState.status == AudioPlayerStatus.Idle) {
+        clearInterval(this.myinterval);
+        this.myinterval = undefined;
         // console.log(oldState.status + "\n" + this.repeat + "  " + this.skip);
         if (this.repeat && !this.skip) {
           if (oldState.status == AudioPlayerStatus.Playing) {
             const track = new Track(
               oldState.resource.metadata.url,
               oldState.resource.metadata.title,
-              oldState.resource.metadata.thumb
+              oldState.resource.metadata.thumb,
+              oldState.resource.metadata.length
             );
 
             this.playTrack(track);
@@ -113,6 +151,7 @@ class MusicBot {
             ],
           });
         } else if (this.autoplay) {
+          // TODO: Making it smarter
           // if it was playing and there is no more song in the queue,
           // then it gets the last song's related_videos and creates a new track
           // (tries 15 times to find a track from the first 6 videos
@@ -137,7 +176,8 @@ class MusicBot {
               info.related_videos[rand].title,
               info.related_videos[rand].thumbnails[
                 info.related_videos[rand].thumbnails.length - 1
-              ].url
+              ].url,
+              info.related_videos[rand].length_seconds
             );
 
             this.playTrack(track);
@@ -249,16 +289,24 @@ class MusicBot {
                 title: track.title,
                 url: track.url,
                 thumb: track.thumb,
+                length: track.length,
               },
               inputType: probe.type,
             });
             this.audioPlayer.play(resource);
+            setTimeout(() => this.currentlyPlaying(), 2500);
           })
-          .catch(console.error);
+          .catch((error) => {
+            console.log(error);
+            clearInterval(this.myinterval);
+            this.myinterval = undefined;
+          });
       })
       .catch((error) => {
         // if it wasn't a skip then it should send a message to let people know
         if (!error.shortMessage.includes("ERR_STREAM_PREMATURE_CLOSE")) {
+          clearInterval(this.myinterval);
+          this.myinterval = undefined;
           this.mchannel.send({
             embeds: [
               new Discord.MessageEmbed()
@@ -272,10 +320,13 @@ class MusicBot {
           console.error("Playback error: \n" + error.message);
         }
         // if it was a skip it shouldn't spam to the console
-        else
+        else {
+          clearInterval(this.myinterval);
+          this.myinterval = undefined;
           console.error(
             `Guild name: ${this.channel.guild.name}. Error in stream process(probably skipped or stopped)`
           );
+        }
       });
   }
 
@@ -291,7 +342,11 @@ class MusicBot {
       if (info) {
         // console.log("eljut ide");
         // fs.writeFile("./info.json","Data\n" + JSON.stringify(info.videoDetails), "utf8",() => console.log("Written to info file!"));
-        if (info.videoDetails.isLiveContent) {
+
+        if (
+          info.videoDetails.isLiveContent &&
+          info.videoDetails.liveBroadcastDetails.isLiveNow
+        ) {
           this.mchannel.send({
             embeds: [
               new Discord.MessageEmbed()
@@ -301,12 +356,14 @@ class MusicBot {
           });
           return;
         }
+
         const track = new Track(
           url,
           info.videoDetails.title,
           info.videoDetails.thumbnails[
             info.videoDetails.thumbnails.length - 1
-          ].url
+          ].url,
+          info.videoDetails.lengthSeconds
         );
         this.enqueue(track);
       }
@@ -396,7 +453,8 @@ class MusicBot {
                     new Track(
                       item.url.split("&list")[0],
                       item.title,
-                      item.bestThumbnail.url
+                      item.bestThumbnail.url,
+                      item.durationSec
                     ),
                     false
                   );
@@ -409,7 +467,8 @@ class MusicBot {
                       new Track(
                         item.url.split("&list")[0],
                         item.title,
-                        item.bestThumbnail.url
+                        item.bestThumbnail.url,
+                        item.durationSec
                       ),
                       false
                     );
@@ -419,7 +478,8 @@ class MusicBot {
                       new Track(
                         item.url.split("&list")[0],
                         item.title,
-                        item.bestThumbnail.url
+                        item.bestThumbnail.url,
+                        item.durationSec
                       )
                     );
                   }
@@ -479,12 +539,25 @@ class MusicBot {
 
       // if it was a play command it should queue it automatically
       if (videos.items.length > 0 && queueIt) {
-        const track = new Track(
-          videos.items[0].url,
-          videos.items[0].title,
-          videos.items[0].bestThumbnail.url
-        );
-        this.enqueue(track);
+        // fs.writeFile("./stuff.json", JSON.stringify(videos), "utf8", ()=>{});
+        for (let i = 0; i < 15; i++) {
+          // It has to be a an already finished live or normal video
+          // and it has to be less than 3 hours and 15 minutes long
+          if (
+            videos.items[i].duration &&
+            toLengthSeconds(videos.items[i].duration) <
+              toLengthSeconds(maxLength)
+          ) {
+            const track = new Track(
+              videos.items[i].url,
+              videos.items[i].title,
+              videos.items[i].bestThumbnail.url,
+              toLengthSeconds(videos.items[i].duration)
+            );
+            this.enqueue(track);
+            break;
+          }
+        }
         // if it was a search it should give you options to choose from (now it is 4 options)
       } else if (videos.items.length > 0 && !queueIt && id != undefined) {
         const searchEmbed = new Discord.MessageEmbed()
@@ -494,11 +567,10 @@ class MusicBot {
         let mindex = 0;
         let notLiveVideos = [];
         videos.items.some((vid) => {
-          if (!vid.isLive && !vid.isUpcoming) {
-            const dur = vid.duration.split(":");
-            if (dur.length == 3 && parseInt(dur[0]) > 3) {
-              return;
-            }
+          if (
+            vid.duration &&
+            toLengthSeconds(vid.duration) < toLengthSeconds(maxLength)
+          ) {
             searchEmbed.addField(
               (++mindex).toString(),
               `[${vid.title}](${vid.url})`
@@ -548,7 +620,8 @@ class MusicBot {
                 const track = new Track(
                   notLiveVideos[num].url,
                   notLiveVideos[num].title,
-                  notLiveVideos[num].bestThumbnail.url
+                  notLiveVideos[num].bestThumbnail.url,
+                  toLengthSeconds(notLiveVideos[num].duration)
                 );
                 this.enqueue(track);
                 const playEmbed = new Discord.MessageEmbed()
@@ -897,6 +970,94 @@ class MusicBot {
         ],
       });
       this.repeat = true;
+    }
+  }
+
+  calcPlayerString(currentLength, allLength) {
+    const iconNum = parseInt((currentLength / allLength) * playerSegments);
+    let playerString = "";
+    for (let i = 0; i < playerSegments; i++) {
+      if (i === iconNum || (i === 0 && iconNum === 0)) {
+        playerString += progressEmote;
+      } else {
+        playerString += "▬";
+      }
+    }
+    return playerString;
+  }
+
+  async currentlyPlaying() {
+    if (
+      this.audioPlayer.state.status === AudioPlayerStatus.Paused ||
+      this.audioPlayer.state.status === AudioPlayerStatus.Playing
+    ) {
+      const currentLength =
+        this.audioPlayer.state.resource.playbackDuration / 1000;
+      const allLength = this.audioPlayer.state.resource.metadata.length;
+      const playerString = this.calcPlayerString(currentLength, allLength);
+      this.playerEmbed = await this.mchannel.send({
+        embeds: [
+          new Discord.MessageEmbed()
+            .setColor("WHITE")
+            .setThumbnail(this.audioPlayer.state.resource.metadata.thumb)
+            .addField(
+              "Currently Playing:",
+              `[${this.audioPlayer.state.resource.metadata.title}](${this.audioPlayer.state.resource.metadata.url})`
+            )
+            .addField(
+              "\u200b",
+              `${toDurationString(
+                currentLength,
+                toDurationString(allLength).split(":").length
+              )}/${toDurationString(allLength)}     ${playerString}`
+            ),
+        ],
+      });
+      if (!this.myinterval) {
+        this.myinterval = setInterval(() => {
+          // console.log("Updating stuff..." + counter++);
+          this.updatePlayerEmbed();
+        }, updateTime);
+      }
+    }
+  }
+
+  updatePlayerEmbed() {
+    if (this.playerEmbed) {
+      if (
+        this.audioPlayer.state.status === AudioPlayerStatus.Paused ||
+        this.audioPlayer.state.status === AudioPlayerStatus.Playing
+      ) {
+        const currentLength =
+          this.audioPlayer.state.resource.playbackDuration / 1000;
+        const allLength = this.audioPlayer.state.resource.metadata.length;
+        const playerString = this.calcPlayerString(currentLength, allLength);
+        // for (let i = 0; i < iconNum; i++) {
+        //   playerString += "■";
+        // }
+        // for (let i = 0; i < playerSegments - iconNum; i++) {
+        //   playerString += "□";
+        // }
+        // playerString += " ∭";
+        this.playerEmbed.edit({
+          embeds: [
+            new Discord.MessageEmbed()
+              .setColor("WHITE")
+              .setThumbnail(this.audioPlayer.state.resource.metadata.thumb)
+              .addField(
+                "Currently Playing:",
+                `[${this.audioPlayer.state.resource.metadata.title}](${this.audioPlayer.state.resource.metadata.url})`
+              )
+              .addField(
+                "\u200b",
+                `${toDurationString(
+                  currentLength,
+                  toDurationString(allLength).split(":").length
+                )}/${toDurationString(allLength)}     ${playerString}`
+              ),
+          ],
+        });
+      }
     }
   }
 }
