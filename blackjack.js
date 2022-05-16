@@ -379,9 +379,9 @@ const bet = async (player, channel, currency) => {
       time: 10000,
     });
 
-    collector.on("collect", (mess) => {
+    collector.on("collect", async (mess) => {
       player.bet = parseInt(mess.content.slice(4).trim());
-      currency.add(player.id, -player.bet);
+      await currency.add(player.id, -player.bet);
       console.log(`${player.name}'s bet: ${player.bet}`);
 
       const betreply = new Discord.MessageEmbed()
@@ -389,6 +389,7 @@ const bet = async (player, channel, currency) => {
         .setDescription(`<@${player.id}> your bet: ${player.bet}`);
 
       mess.channel.send({ embeds: [betreply] });
+      resolve();
     });
 
     collector.on("end", (collected, reason) => {
