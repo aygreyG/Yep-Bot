@@ -2,6 +2,7 @@ const Discord = require("discord.js");
 const { prefix, token } = require("./config.json");
 const blackjack = require("./blackjack");
 const coinflip = require("./coinflip");
+const help = require("./commands/help");
 const { Users } = require("./dbObjects");
 const { MusicBot } = require("./music");
 const {
@@ -26,104 +27,6 @@ const client = new Discord.Client({
     Discord.Intents.FLAGS.GUILD_INTEGRATIONS,
   ],
 });
-
-// Help szövege:
-const helpEmbed1 = new Discord.MessageEmbed()
-  .setColor("#ADE9F2")
-  .setTitle("__**Commands:**__")
-  .addFields(
-    {
-      name: `${prefix}help <optional page number>`,
-      value: "❓ Lists the commands on the given page.",
-    },
-    {
-      name: `${prefix}b/${prefix}blackjack`,
-      value: "🃏 Starts a new blackjack game.",
-    },
-    {
-      name: `${prefix}f/${prefix}flip <your bet> <heads/tails>`,
-      value: "🪙 Flips a coin.",
-    },
-    {
-      name: `${prefix}balance/${prefix}balance <user tag>`,
-      value: "💰 Shows you your or the tagged user's balance.",
-    },
-    {
-      name: `${prefix}l/${prefix}leaderboard`,
-      value: "📋 Shows you the top 15 wealthiest user on the server.",
-    },
-    {
-      name: `${prefix}ping`,
-      value: "🏓 Pings the bot, if it's available it will answer.",
-    },
-    {
-      name: `${prefix}mc`,
-      value:
-        "🟩 Gets information about the minecraft server that is tied to this bot.",
-    }
-  )
-  .setFooter({
-    text: "Page: 1/2",
-  });
-
-const helpEmbed2 = new Discord.MessageEmbed()
-  .setColor("#ADE9F2")
-  .setTitle("__**Commands:**__")
-  .addFields(
-    {
-      name: `${prefix}help <optional page number>`,
-      value: "❓ Lists the commands on the given page.",
-    },
-    {
-      name: `${prefix}p/${prefix}play <youtube url>/<song name>`,
-      value:
-        "🎶 Joins your voice channel and plays the youtube url or searches for a song. If there is already a song   playing, it will be put in a queue.",
-    },
-    {
-      name: `${prefix}search/${prefix}s <song name>`,
-      value: "❔ Searches youtube and gives you 4 options to choose from.",
-    },
-    {
-      name: `${prefix}playlist <youtube playlist url>`,
-      value: "📜 Queues the given playlist.",
-    },
-    {
-      name: `${prefix}queue/${prefix}q`,
-      value: "📃 Shows you the queue.",
-    },
-    {
-      name: `${prefix}skip/${prefix}next/${prefix}n`,
-      value:
-        "⏭ Skips the currently playing song, if there is no song in the queue and autoplay is enabled, plays a related  song.",
-    },
-    {
-      name: `${prefix}autoplay/${prefix}ap`,
-      value: "🔀 It enables/disables autoplay.",
-    },
-    {
-      name: `${prefix}leave`,
-      value: "⏏ Stops playback and leaves the channel.",
-    },
-    {
-      name: `${prefix}pause`,
-      value: "⏸ Pauses the playback.",
-    },
-    {
-      name: `${prefix}resume`,
-      value: "▶ Resumes the playback.",
-    },
-    {
-      name: `${prefix}stop`,
-      value: "⏹ Stops playback, sets autoplay to off and clears the queue.",
-    },
-    {
-      name: `${prefix}del/${prefix}delete <queue index>/<song name>`,
-      value: "💥 Deletes the song from the queue.",
-    }
-  )
-  .setFooter({
-    text: "Page: 2/2",
-  });
 
 /* add metódus hozzáadása currencyhez */
 
@@ -252,10 +155,8 @@ client.on("messageCreate", async (message) => {
         break;
       case "help":
         if (args.length > 0) {
-          if (args[0] == "2") {
-            message.channel.send({ embeds: [helpEmbed2] });
-          } else message.channel.send({ embeds: [helpEmbed1] });
-        } else message.channel.send({ embeds: [helpEmbed1] });
+          help(message.channel, args[0]);
+        } else help(message.channel, "");
         break;
       case "l":
       case "leaderboard":
