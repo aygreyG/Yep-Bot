@@ -1,9 +1,8 @@
-const { MessageEmbed, MessageActionRow, MessageButton } = require("discord.js");
-const Discord = require("discord.js");
+const { MessageEmbed, MessageActionRow, MessageButton, TextChannel } = require("discord.js");
 
 /**
  *
- * @param {Discord.TextChannel} channel
+ * @param {TextChannel} channel
  * @param {string} title
  * @param {string[]} items
  */

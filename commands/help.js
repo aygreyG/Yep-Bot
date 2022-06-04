@@ -1,12 +1,11 @@
-const { MessageEmbed } = require("discord.js");
-const Discord = require("discord.js");
+const { MessageEmbed, TextChannel } = require("discord.js");
 const { commands } = require("../constants/commandhelp");
 const paginator = require("../utils/paginator");
 const embedcolor = "#ADE9F2";
 
 /**
  *
- * @param {Discord.TextChannel} channel
+ * @param {TextChannel} channel
  * @param {string} arg
  */
 module.exports = (channel, arg) => {

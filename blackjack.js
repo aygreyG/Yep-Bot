@@ -1,4 +1,4 @@
-const { Cards } = require("./cards.json");
+const { Cards } = require("./constants/cards.json");
 const Discord = require("discord.js");
 const { prefix } = require("./config.json");
 

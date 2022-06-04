@@ -1,4 +1,4 @@
-const Sequelize = require("sequelize");
+const { Sequelize } = require("sequelize");
 
 const sequelize = new Sequelize("database", "username", "password", {
   host: "localhost",
@@ -7,7 +7,8 @@ const sequelize = new Sequelize("database", "username", "password", {
   storage: "database.sqlite",
 });
 
-require("./Users")(sequelize, Sequelize.DataTypes);
+require("./models/User")(sequelize, Sequelize.DataTypes);
+require("./models/Coins")(sequelize, Sequelize.DataTypes);
 
 const force = process.argv.includes("--force") || process.argv.includes("-f");
 

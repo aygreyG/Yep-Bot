@@ -1,8 +1,9 @@
 const Discord = require("discord.js");
 const { prefix, token } = require("./config.json");
 const blackjack = require("./blackjack");
-const coinflip = require("./coinflip");
+const coinflip = require("./commands/coinflip");
 const help = require("./commands/help");
+const mcStatusCheck = require("./commands/mcStatusCheck");
 const { Users } = require("./dbObjects");
 const { MusicBot } = require("./music");
 const {
@@ -13,7 +14,6 @@ const {
   VoiceConnectionStatus,
 } = require("@discordjs/voice");
 const { promisify } = require("util");
-const { mcStatusCheck } = require("./mc_info");
 
 const wait = promisify(setTimeout);
 const currency = new Discord.Collection();
@@ -136,7 +136,7 @@ client.on("messageCreate", async (message) => {
             (args[0].toLowerCase() == "tails" ||
               args[0].toLowerCase() == "heads"))
         ) {
-          coinflip.flip(
+          coinflip(
             message,
             currency,
             parseInt(args[1]),
@@ -395,36 +395,12 @@ client.on("messageCreate", async (message) => {
       case "current":
         if (musicBot) musicBot.currentlyPlaying();
         break;
+      case "minecraft":
       case "mc":
-        const status = await mcStatusCheck();
-        if (status[2]) {
-          message.reply({
-            embeds: [
-              new Discord.MessageEmbed()
-                .setColor(status[0] ? "DARK_GREEN" : "RED")
-                .setDescription(status[1])
-                .setTitle("Minecraft Server Status")
-                .setThumbnail("attachment://minecraft_logo.png"),
-            ],
-            files: [
-              {
-                attachment: "./tmp.png",
-                name: "minecraft_logo.png",
-              },
-            ],
-          });
+        if (args.length > 0) {
+          mcStatusCheck(message, args[0]);
         } else {
-          message.reply({
-            embeds: [
-              new Discord.MessageEmbed()
-                .setColor(status[0] ? "DARK_GREEN" : "RED")
-                .setDescription(status[1])
-                .setTitle("Minecraft Server Status")
-                .setThumbnail(
-                  "https://cdn.icon-icons.com/icons2/2699/PNG/512/minecraft_logo_icon_168974.png"
-                ),
-            ],
-          });
+          mcStatusCheck(message);
         }
         break;
       default:

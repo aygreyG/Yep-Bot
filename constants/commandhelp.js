@@ -27,9 +27,9 @@ module.exports = {
       description: "🏓 Pings the bot, if it's available it will answer.",
     },
     {
-      name: `${prefix}mc`,
+      name: `${prefix}mc/${prefix}minecraft <optional server ip>`,
       description:
-        "🟩 Gets information about the minecraft server that is tied to this bot.",
+        "🟩 Gets information about the minecraft server that is configured to this bot or tries to get information about the given server ip.",
     },
     {
       name: `${prefix}help <optional page number>`,
