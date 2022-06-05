@@ -3,7 +3,8 @@ const { prefix, token } = require("./config.json");
 const blackjack = require("./blackjack");
 const coinflip = require("./commands/coinflip");
 const help = require("./commands/help");
-const mcStatusCheck = require("./commands/mcStatusCheck");
+const minecraft = require("./commands/minecraft");
+const registercommands = require("./commands/registercommands");
 const { Users } = require("./dbObjects");
 const { MusicBot } = require("./music");
 const {
@@ -13,9 +14,7 @@ const {
   joinVoiceChannel,
   VoiceConnectionStatus,
 } = require("@discordjs/voice");
-const { promisify } = require("util");
-
-const wait = promisify(setTimeout);
+const fs = require("fs");
 const currency = new Discord.Collection();
 const client = new Discord.Client({
   intents: [
@@ -27,6 +26,17 @@ const client = new Discord.Client({
     Discord.Intents.FLAGS.GUILD_INTEGRATIONS,
   ],
 });
+client.commands = new Discord.Collection();
+const commandFiles = fs
+  .readdirSync("./commands/")
+  .filter((file) => file.endsWith(".js"));
+
+for (const file of commandFiles) {
+  const command = require(`./commands/${file}`);
+  if (command.data) {
+    client.commands.set(command.data.name, command);
+  }
+}
 
 /* add metódus hozzáadása currencyhez */
 
@@ -106,43 +116,12 @@ client.on("messageCreate", async (message) => {
     client.user.setActivity(`${prefix}help`, { type: "LISTENING" });
     let musicBot = subcriptions.get(message.guildId);
     switch (command) {
+      case "registercommands":
+        registercommands.execute(message);
+        break;
       case "f":
       case "flip":
-        if (
-          (parseInt(args[0]) > 0 &&
-            parseInt(args[0]) <=
-              (await currency.getBalance(message.author.id)) &&
-            (args[1].toLowerCase() == "tails" ||
-              args[1].toLowerCase() == "heads")) ||
-          (parseInt(args[0]) == 1 &&
-            (await currency.getBalance(message.author.id)) <= 0 &&
-            (args[1].toLowerCase() == "tails" ||
-              args[1].toLowerCase() == "heads"))
-        ) {
-          coinflip.flip(
-            message,
-            currency,
-            parseInt(args[0]),
-            args[1].toLowerCase()
-          );
-        } else if (
-          (parseInt(args[1]) > 0 &&
-            parseInt(args[1]) <=
-              (await currency.getBalance(message.author.id)) &&
-            (args[0].toLowerCase() == "tails" ||
-              args[0].toLowerCase() == "heads")) ||
-          (parseInt(args[1]) == 1 &&
-            (await currency.getBalance(message.author.id)) <= 0 &&
-            (args[0].toLowerCase() == "tails" ||
-              args[0].toLowerCase() == "heads"))
-        ) {
-          coinflip(
-            message,
-            currency,
-            parseInt(args[1]),
-            args[0].toLowerCase()
-          );
-        }
+        if (args.length > 0) coinflip.execute(message, currency, args);
         break;
       case "ping":
         message.channel.send({
@@ -155,8 +134,8 @@ client.on("messageCreate", async (message) => {
         break;
       case "help":
         if (args.length > 0) {
-          help(message.channel, args[0]);
-        } else help(message.channel, "");
+          help.execute(message, args[0]);
+        } else help.execute(message);
         break;
       case "l":
       case "leaderboard":
@@ -398,13 +377,33 @@ client.on("messageCreate", async (message) => {
       case "minecraft":
       case "mc":
         if (args.length > 0) {
-          mcStatusCheck(message, args[0]);
+          minecraft.execute(message, args[0]);
         } else {
-          mcStatusCheck(message);
+          minecraft.execute(message);
         }
         break;
       default:
     }
+  }
+});
+
+client.on("interactionCreate", async (interaction) => {
+  if (!interaction.isCommand) return;
+  const command = client.commands.get(interaction.commandName);
+  if (!command) return;
+
+  try {
+    await command.execute(interaction, currency);
+  } catch (error) {
+    console.error(error);
+    await interaction.reply({
+      embed: [
+        new Discord.MessageEmbed()
+          .setColor("RED")
+          .setDescription("There was an error while executing this command!"),
+      ],
+      ephemeral: true,
+    });
   }
 });
 

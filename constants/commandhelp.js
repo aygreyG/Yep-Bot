@@ -3,8 +3,8 @@ const { prefix } = require("../config.json");
 module.exports = {
   commands: [
     {
-      name: `${prefix}help <optional page number>`,
-      description: "❓ Lists the commands on the given page.",
+      name: `${prefix}help <optional command name>`,
+      description: "❓ Lists the commands and their descriptions or gives the description of the given command.",
     },
     {
       name: `${prefix}b/${prefix}blackjack`,
@@ -30,10 +30,6 @@ module.exports = {
       name: `${prefix}mc/${prefix}minecraft <optional server ip>`,
       description:
         "🟩 Gets information about the minecraft server that is configured to this bot or tries to get information about the given server ip.",
-    },
-    {
-      name: `${prefix}help <optional page number>`,
-      description: "❓ Lists the commands on the given page.",
     },
     {
       name: `${prefix}p/${prefix}play <youtube url>/<song name>`,

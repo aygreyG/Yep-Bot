@@ -1,98 +1,130 @@
 const Discord = require("discord.js");
-const fs = require("fs");
+const { SlashCommandBuilder } = require("@discordjs/builders");
 const { Coins } = require("../dbObjects");
 
 // -flip heads/tails <bet>
 // -flip <bet> heads/tails
 
-module.exports = async (message, currency, bet, headsOrTails) => {
-  const balance = await currency.getBalance(message.author.id);
+module.exports = {
+  data: new SlashCommandBuilder()
+    .setName("flip")
+    .setDescription("🪙 Flips a coin.")
+    .addStringOption((option) =>
+      option
+        .setName("choice")
+        .setDescription("Heads or tails")
+        .setRequired(true)
+        .addChoices(
+          { name: "heads", value: "heads" },
+          { name: "tails", value: "tails" }
+        )
+    )
+    .addIntegerOption((option) =>
+      option
+        .setName("amount")
+        .setDescription("The amount of your bet.")
+        .setRequired(true)
+    ),
+  async execute(interaction, currency, args = undefined) {
+    const error = (description) => {
+      interaction.reply({
+        embeds: [
+          new Discord.MessageEmbed()
+            .setAuthor({ name: "Yep Coinflip" })
+            .setColor("RED")
+            .setThumbnail("https://i.imgur.com/Ol3ZXQV.png")
+            .setDescription(description),
+        ],
+      });
+    };
+    const reply = (fieldname, fieldvalue, footer, color) => {
+      interaction.reply({
+        embeds: [
+          new Discord.MessageEmbed()
+            .setColor(color)
+            .setAuthor({ name: "Yep Coinflip" })
+            .setThumbnail("https://i.imgur.com/Ol3ZXQV.png")
+            .addField(fieldname, fieldvalue)
+            .setFooter({
+              text: footer,
+            }),
+        ],
+      });
+    };
+    let user;
+    let bet;
+    let choice;
+    if (args) {
+      user = interaction.author;
+      if (parseInt(args[0]) > 0) {
+        bet = parseInt(args[0]);
+        choice = args[1];
+      } else if (parseInt(args[1])) {
+        bet = parseInt(args[1]);
+        choice = args[0];
+      } else {
+        bet = -1;
+        choice = args[0];
+      }
+      choice = choice.toLowerCase().trim();
+    } else {
+      user = interaction.member.user;
+      bet = interaction.options.getInteger("amount");
+      choice = interaction.options.getString("choice");
+    }
+    const balance = await currency.getBalance(user.id);
+    if (balance < bet) {
+      error("You don't have enough.");
+      return;
+    }
+    if (!["tails", "heads"].includes(choice)) {
+      error("Invalid argument.");
+      return;
+    }
 
-  //   (parseInt(args[0]) > 0 &&
-  //     parseInt(args[0]) <=
-  //       (await currency.getBalance(message.author.id)) &&
-  //     (args[1].toLowerCase() == "tails" ||
-  //       args[1].toLowerCase() == "heads")) ||
-  //   (parseInt(args[0]) == 1 &&
-  //     (await currency.getBalance(message.author.id)) <= 0 &&
-  //     (args[1].toLowerCase() == "tails" ||
-  //       args[1].toLowerCase() == "heads"))
-  // ) {
-  //   coinflip.flip(
-  //     message,
-  //     currency,
-  //     parseInt(args[0]),
-  //     args[1].toLowerCase()
-  //   );
-  // } else if (
-  //   (parseInt(args[1]) > 0 &&
-  //     parseInt(args[1]) <=
-  //       (await currency.getBalance(message.author.id)) &&
-  //     (args[0].toLowerCase() == "tails" ||
-  //       args[0].toLowerCase() == "heads")) ||
-  //   (parseInt(args[1]) == 1 &&
-  //     (await currency.getBalance(message.author.id)) <= 0 &&
-  //     (args[0].toLowerCase() == "tails" ||
-  //       args[0].toLowerCase() == "heads"))
-  
+    let coins = await Coins.findAll();
+    if (coins.length == 0) {
+      await Coins.create({ cointype: "heads", amount: 0 });
+      await Coins.create({ cointype: "tails", amount: 0 });
+      coins = await Coins.findAll();
+    }
 
+    let heads = coins[0];
+    let tails = coins[1];
 
-  let coins = await Coins.findAll();
-  if (coins.length == 0) {
-    await Coins.create({cointype: "heads", amount: 0});
-    await Coins.create({cointype: "tails", amount: 0});
-    coins = await Coins.findAll();
-  }
+    // rand < 0.5 HEADS
+    // rand >= 0.5 TAILS
+    const rand = Math.random();
 
-  let heads = coins[0];
-  let tails = coins[1];
+    if (rand < 0.5) {
+      heads.amount++;
+      heads.save();
+    } else {
+      tails.amount++;
+      tails.save();
+    }
 
-  // rand < 0.5 HEADS
-  // rand >= 0.5 TAILS
-  const rand = Math.random();
-
-  if (rand < 0.5) {
-    heads.amount++;
-    heads.save();
-  } else {
-    tails.amount++;
-    tails.save();
-  }
-
-  if (
-    (headsOrTails == "heads" && rand < 0.5) ||
-    (headsOrTails == "tails" && rand >= 0.5)
-  ) {
-    currency.add(message.author.id, bet);
-    console.log(`${message.author.username} won: ${bet}`);
-    message.channel.send({
-      embeds: [
-        new Discord.MessageEmbed()
-          .setColor("#AFEC28")
-          .setAuthor({ name: "Yep Coinflip" })
-          .setThumbnail("https://i.imgur.com/Ol3ZXQV.png")
-          .addField(
-            `${headsOrTails.toUpperCase()}`,
-            `${message.author} won: \`${bet}\``
-          )
-          .setFooter({ text: `Tails: ${coins.tails}, Heads: ${coins.heads}.` }),
-      ],
-    });
-  } else {
-    currency.add(message.author.id, -bet);
-    console.log(`${message.author.username} lost: ${bet}`);
-    message.channel.send({
-      embeds: [
-        new Discord.MessageEmbed()
-          .setColor("#A00000")
-          .setAuthor({ name: "Yep Coinflip" })
-          .setThumbnail("https://i.imgur.com/Ol3ZXQV.png")
-          .addField(
-            `${headsOrTails == "heads" ? "TAILS" : "HEADS"}`,
-            `${message.author} lost: \`${bet}\``
-          )
-          .setFooter({ text: `Tails: ${coins.tails}, Heads: ${coins.heads}.` }),
-      ],
-    });
-  }
+    if (
+      (choice == "heads" && rand < 0.5) ||
+      (choice == "tails" && rand >= 0.5)
+    ) {
+      currency.add(user.id, bet);
+      console.log(`${user.username} won: ${bet}`);
+      reply(
+        `${choice.toUpperCase()}`,
+        `${user.username} won: \`${bet}\``,
+        `Tails: ${tails.amount}, Heads: ${heads.amount}.`,
+        "#AFEC28"
+      );
+    } else {
+      currency.add(user.id, -bet);
+      console.log(`${user.username} lost: ${bet}`);
+      reply(
+        `${choice == "heads" ? "TAILS" : "HEADS"}`,
+        `${user.username} lost: \`${bet}\``,
+        `Tails: ${tails.amount}, Heads: ${heads.amount}.`,
+        "#A00000"
+      );
+    }
+  },
 };
