@@ -18,17 +18,18 @@ module.exports = {
     .addStringOption((option) =>
       option.setName("command").setDescription("A command.")
     ),
-  async execute(interaction, arg = undefined) {
+  async execute(interaction, client, arg = undefined) {
     if (interaction.commandName) {
       arg = interaction.options.getString("command");
     }
-    if (arg === undefined || arg == null) {
+
+    if (arg == undefined || arg == null) {
       const fieldnames = [];
       const items = [];
 
-      commands.forEach((cmd) => {
-        fieldnames.push(cmd.name);
-        items.push(cmd.description);
+      client.commands.forEach((cmd) => {
+        fieldnames.push(cmd.data.name);
+        items.push(cmd.data.description);
       });
 
       if (interaction.commandName) {
@@ -46,8 +47,8 @@ module.exports = {
         embedcolor
       );
     } else {
-      const com = commands.find((cmd) => {
-        return cmd.name.includes(arg);
+      const com = client.commands.find((cmd) => {
+        return cmd.data.name.includes(arg);
       });
       if (com) {
         interaction.reply({
@@ -55,7 +56,7 @@ module.exports = {
             new MessageEmbed()
               .setColor(embedcolor)
               .setDescription("__**Command and what it does**__")
-              .addField(com.name, com.description),
+              .addField(com.data.name, com.data.description),
           ],
         });
       } else {

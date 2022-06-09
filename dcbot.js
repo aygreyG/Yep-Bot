@@ -5,6 +5,7 @@ const coinflip = require("./commands/coinflip");
 const help = require("./commands/help");
 const minecraft = require("./commands/minecraft");
 const registercommands = require("./commands/registercommands");
+const ping = require("./commands/ping");
 const { Users } = require("./dbObjects");
 const { MusicBot } = require("./music");
 const {
@@ -15,7 +16,7 @@ const {
   VoiceConnectionStatus,
 } = require("@discordjs/voice");
 const fs = require("fs");
-const currency = new Discord.Collection();
+const leaderboard = require("./commands/leaderboard");
 const client = new Discord.Client({
   intents: [
     Discord.Intents.FLAGS.GUILDS,
@@ -26,52 +27,21 @@ const client = new Discord.Client({
     Discord.Intents.FLAGS.GUILD_INTEGRATIONS,
   ],
 });
-client.commands = new Discord.Collection();
-const commandFiles = fs
-  .readdirSync("./commands/")
-  .filter((file) => file.endsWith(".js"));
-
-for (const file of commandFiles) {
-  const command = require(`./commands/${file}`);
-  if (command.data) {
-    client.commands.set(command.data.name, command);
-  }
-}
+client.commands = require("./utils/getCommands")();
+client.currency = new Discord.Collection();
+client.musicBots = new Discord.Collection();
 
 /* add metódus hozzáadása currencyhez */
-
-const leaderboardEmbed = (members) => {
-  const mm = members.map((member) => member.id);
-  return new Discord.MessageEmbed().setColor("ORANGE").setDescription(
-    currency
-      .sort((a, b) => b.balance - a.balance)
-      .filter(
-        (user) =>
-          client.users.cache.has(user.user_id) &&
-          mm.includes(user.user_id) &&
-          user.user_id != ""
-      )
-      .first(15)
-      .map(
-        (user, position) =>
-          `#${position + 1} 👉 ${
-            client.users.cache.get(user.user_id).username
-          }: ${user.balance}`
-      )
-      .join("\n")
-  );
-};
-
-Reflect.defineProperty(currency, "add", {
+Reflect.defineProperty(client.currency, "add", {
   value: async function add(id, amount) {
-    const user = currency.get(id);
+    const user = client.currency.get(id);
     if (user) {
       user.balance += Number(amount);
       return user.save();
     }
     const newUser = await Users.create({ user_id: id, balance: amount });
     // console.log(amount);
-    currency.set(id, newUser);
+    client.currency.set(id, newUser);
     console.log("new user created: " + newUser.user_id);
     return newUser;
   },
@@ -79,13 +49,13 @@ Reflect.defineProperty(currency, "add", {
 
 /* getBalance metódus hozzáadása currencyhez */
 
-Reflect.defineProperty(currency, "getBalance", {
+Reflect.defineProperty(client.currency, "getBalance", {
   value: async function getBalance(id) {
-    const user = currency.get(id);
+    const user = client.currency.get(id);
     if (user) {
       return user.balance;
     }
-    await currency.add(id, 100);
+    await client.currency.add(id, 100);
     return 100;
   },
 });
@@ -95,7 +65,7 @@ client.once("ready", async () => {
   client.user.setActivity(`${prefix}help`, { type: "LISTENING" });
   storedBalances.forEach((b) => {
     if (b.user_id != "" && b.user_id != "Ez egy id" && b.user_id > 0) {
-      currency.set(b.user_id, b);
+      client.currency.set(b.user_id, b);
       client.users.fetch(b.user_id);
     }
   });
@@ -121,36 +91,25 @@ client.on("messageCreate", async (message) => {
         break;
       case "f":
       case "flip":
-        if (args.length > 0) coinflip.execute(message, currency, args);
+        if (args.length > 0) coinflip.execute(message, client, args);
         break;
       case "ping":
-        message.channel.send({
-          embeds: [
-            new Discord.MessageEmbed()
-              .setColor("#D57A6F")
-              .setDescription(`Pong 🏓 ${message.author}`),
-          ],
-        });
+        ping.execute(message);
         break;
       case "help":
         if (args.length > 0) {
-          help.execute(message, args[0]);
-        } else help.execute(message);
+          help.execute(message, client, args[0]);
+        } else help.execute(message, client);
         break;
       case "l":
       case "leaderboard":
-        message.guild.members
-          .fetch()
-          .then((members) => {
-            message.channel.send({ embeds: [leaderboardEmbed(members)] });
-          })
-          .catch(console.error);
+        leaderboard.execute(message, client);
         break;
       case "bet":
         break;
       case "b":
       case "blackjack":
-        blackjack.start(message, currency);
+        blackjack.start(message, client.currency);
         break;
       case "balance":
         if (message.mentions.users.size) {
@@ -159,7 +118,7 @@ client.on("messageCreate", async (message) => {
               new Discord.MessageEmbed()
                 .setColor("DARK_ORANGE")
                 .setDescription(
-                  `${message.mentions.users.first()} has: ${await currency.getBalance(
+                  `${message.mentions.users.first()} has: ${await client.currency.getBalance(
                     message.mentions.users.first().id
                   )}`
                 ),
@@ -171,7 +130,9 @@ client.on("messageCreate", async (message) => {
               new Discord.MessageEmbed()
                 .setColor("DARK_ORANGE")
                 .setDescription(
-                  `${message.author}, you have: ${await currency.getBalance(
+                  `${
+                    message.author
+                  }, you have: ${await client.currency.getBalance(
                     message.author.id
                   )}`
                 ),
@@ -187,16 +148,18 @@ client.on("messageCreate", async (message) => {
       case "add":
         if (message.author.id === "107398653542400000") {
           if (message.mentions.users.size) {
-            currency.add(message.mentions.users.first().id, args[1]);
+            client.currency.add(message.mentions.users.first().id, args[1]);
             return message.channel.send({
-              content: `${message.mentions.users.first()} now has ${currency.getBalance(
+              content: `${message.mentions.users.first()} now has ${client.currency.getBalance(
                 message.mentions.users.first().id
               )}`,
             });
           }
-          currency.add(message.author.id, args[0]);
+          client.currency.add(message.author.id, args[0]);
           message.reply({
-            content: `you now have ${currency.getBalance(message.author.id)}`,
+            content: `you now have ${client.currency.getBalance(
+              message.author.id
+            )}`,
           });
           return;
         }
@@ -393,7 +356,7 @@ client.on("interactionCreate", async (interaction) => {
   if (!command) return;
 
   try {
-    await command.execute(interaction, currency);
+    await command.execute(interaction, client);
   } catch (error) {
     console.error(error);
     await interaction.reply({
@@ -420,5 +383,3 @@ client.on("voiceStateUpdate", (oldState, newState) => {
 });
 
 client.login(token);
-
-module.exports = { currency };

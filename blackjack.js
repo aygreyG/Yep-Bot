@@ -146,7 +146,6 @@ class BlackjackGame {
             } & Something\n**Value:**  \`${Cards[this.dealer.card[0]].value}\``
       )
       .setThumbnail(
-        // "https://www.seekpng.com/png/full/819-8194226_blackjack-instant-game-logo-graphic-design.png" <-- not working properly
         "https://cdn-icons-png.flaticon.com/512/1983/1983632.png"
       );
 
@@ -208,7 +207,6 @@ class BlackjackGame {
           this.dealer.card.includes(51) ||
           this.dealer.card.includes(48))
       ) {
-        // i hate Array.forEach 🙂 for of is way better
         for (const card of this.dealer.card) {
           if (Cards[card].value == 11) {
             dealerValue -= 10;

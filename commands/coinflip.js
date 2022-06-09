@@ -25,7 +25,7 @@ module.exports = {
         .setDescription("The amount of your bet.")
         .setRequired(true)
     ),
-  async execute(interaction, currency, args = undefined) {
+  async execute(interaction, client, args = undefined) {
     const error = (description) => {
       interaction.reply({
         embeds: [
@@ -72,7 +72,7 @@ module.exports = {
       bet = interaction.options.getInteger("amount");
       choice = interaction.options.getString("choice");
     }
-    const balance = await currency.getBalance(user.id);
+    const balance = await client.currency.getBalance(user.id);
     if (balance < bet) {
       error("You don't have enough.");
       return;
@@ -108,7 +108,7 @@ module.exports = {
       (choice == "heads" && rand < 0.5) ||
       (choice == "tails" && rand >= 0.5)
     ) {
-      currency.add(user.id, bet);
+      client.currency.add(user.id, bet);
       console.log(`${user.username} won: ${bet}`);
       reply(
         `${choice.toUpperCase()}`,
@@ -117,7 +117,7 @@ module.exports = {
         "#AFEC28"
       );
     } else {
-      currency.add(user.id, -bet);
+      client.currency.add(user.id, -bet);
       console.log(`${user.username} lost: ${bet}`);
       reply(
         `${choice == "heads" ? "TAILS" : "HEADS"}`,

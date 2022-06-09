@@ -19,6 +19,7 @@ const ytsr = require("ytsr");
 const fs = require("fs");
 const ytpl = require("ytpl");
 const { progressEmote } = require("./config.json");
+const { toDurationString, toLengthSeconds } = require("./utils/durationutil");
 // let counter = 0;
 
 //the number of segments on the "currently playing song" embed progressbar, default is 18
@@ -28,28 +29,7 @@ const updateTime = 1250;
 //the maximum length a searched song can be, default is "03:15:00"
 const maxLength = "03:15:00";
 
-const toLengthSeconds = (stringduration) => {
-  if (stringduration) {
-    const lengtharray = stringduration.split(":");
-    if (lengtharray.length > 3) return -1;
-    let length = 0;
-    for (let i = 0; i < lengtharray.length; i++) {
-      length += parseInt(lengtharray[i]) * 60 ** (lengtharray.length - 1 - i);
-    }
-    return length;
-  }
-  return -1;
-};
 
-const toDurationString = (length, strlength = 0) => {
-  if (length === -1) return "-1";
-  const date = new Date(length * 1000).toUTCString().split(" ")[4];
-  if (parseInt(date.split(":")[0]) > 0 || strlength === 3) {
-    return date;
-  } else if (parseInt(date.split(":")[1]) > 0 || strlength === 2) {
-    return date.slice(3);
-  } else return date.slice(6);
-};
 
 /**
  * Class of the Track implementation.

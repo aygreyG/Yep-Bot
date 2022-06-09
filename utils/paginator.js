@@ -1,4 +1,9 @@
-const { MessageEmbed, MessageActionRow, MessageButton, TextChannel } = require("discord.js");
+const {
+  MessageEmbed,
+  MessageActionRow,
+  MessageButton,
+  TextChannel,
+} = require("discord.js");
 
 /**
  *
@@ -10,10 +15,11 @@ module.exports = async (
   channel,
   title,
   items,
-  fieldnames=[],
-  maxItemCount=5,
-  timeout=90000,
-  color="WHITE"
+  fieldnames = [],
+  maxItemCount = 5,
+  timeout = 90000,
+  color = "WHITE",
+  inline = false
 ) => {
   const embed = new MessageEmbed().setColor(color).setTitle(title);
   let allpages = Math.ceil(items.length / maxItemCount);
@@ -28,9 +34,9 @@ module.exports = async (
         index + 1 - (currpage - 1) * maxItemCount > 0
       ) {
         if (fieldnames.length == 0) {
-          embed.addField((index + 1).toString(), item);
+          embed.addField((index + 1).toString(), item, inline);
         } else {
-          embed.addField(fieldnames[index], item);
+          embed.addField(fieldnames[index], item, inline);
         }
       }
       index++;
@@ -39,10 +45,14 @@ module.exports = async (
 
   if (allpages == 1) {
     items.forEach((item, idx) => {
-      embed.addField(fieldnames[idx], item);
+      if (fieldnames.length == 0) {
+        embed.addField((idx + 1).toString(), item, inline);
+      } else {
+        embed.addField(fieldnames[idx], item, inline);
+      }
     });
     channel.send({
-      embeds: [embed]
+      embeds: [embed],
     });
     return;
   }

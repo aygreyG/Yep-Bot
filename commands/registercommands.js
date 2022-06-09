@@ -8,21 +8,15 @@ const { MessageEmbed } = require("discord.js");
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("registercommands")
-    .setDescription("Registers slash commands to this server.")
+    .setDescription("📝 Registers slash commands to this server.")
     .setDefaultMemberPermissions(),
-  async execute(interaction) {
+  async execute(interaction, client) {
     const commands = [];
-    const files = readdirSync("./commands/").filter(
-      (file) => file.includes(".js") && file !== "registercommands.js"
-    );
-    for (const file of files) {
-      // console.log(file);
-      const command = require(`./${file}`);
-      if (command.data) {
-        commands.push(command.data.toJSON());
-      }
-    }
-    commands.push(this.data.toJSON());
+    
+    client.commands.forEach(command => {
+      commands.push(command.data.toJSON());
+    });
+
     const rest = new REST({ version: "9" }).setToken(token);
     try {
       console.log("Started refreshing application (/) commands.");
