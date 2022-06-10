@@ -20,6 +20,7 @@ const fs = require("fs");
 const ytpl = require("ytpl");
 const { progressEmote } = require("./config.json");
 const { toDurationString, toLengthSeconds } = require("./utils/durationutil");
+const Track = require("./models/Track");
 // let counter = 0;
 
 //the number of segments on the "currently playing song" embed progressbar, default is 18
@@ -28,21 +29,6 @@ const playerSegments = 18;
 const updateTime = 1250;
 //the maximum length a searched song can be, default is "03:15:00"
 const maxLength = "03:15:00";
-
-
-
-/**
- * Class of the Track implementation.
- * It stores the url, title and thumbnail of the video.
- */
-class Track {
-  constructor(url, title, thumb, length = -1) {
-    this.url = url;
-    this.title = title;
-    this.thumb = thumb;
-    this.length = length;
-  }
-}
 
 /**
  * Class of the musicBot implementation.
@@ -216,26 +202,17 @@ class MusicBot {
     ) {
       this.queue.push(track);
       if (embed) {
-        this.mchannel.send({
-          embeds: [
-            new Discord.MessageEmbed()
-              .setColor("DARK_BUT_NOT_BLACK")
-              .setThumbnail(track.thumb)
-              .addField("Queued: ", `[${track.title}](${track.url})`),
-          ],
-        });
+        return new Discord.MessageEmbed()
+          .setColor("DARK_BUT_NOT_BLACK")
+          .setThumbnail(track.thumb)
+          .addField("Queued: ", `[${track.title}](${track.url})`);
       }
     } else {
       this.playTrack(track);
-
-      this.mchannel.send({
-        embeds: [
-          new Discord.MessageEmbed()
-            .setColor("DARK_VIVID_PINK")
-            .setThumbnail(track.thumb)
-            .addField("Now playing: ", `[${track.title}](${track.url})`),
-        ],
-      });
+      return new Discord.MessageEmbed()
+        .setColor("DARK_VIVID_PINK")
+        .setThumbnail(track.thumb)
+        .addField("Now playing: ", `[${track.title}](${track.url})`);
     }
   }
 
@@ -320,21 +297,15 @@ class MusicBot {
       const info = await getInfo(url);
 
       if (info) {
-        // console.log("eljut ide");
         // fs.writeFile("./info.json","Data\n" + JSON.stringify(info.videoDetails), "utf8",() => console.log("Written to info file!"));
 
         if (
           info.videoDetails.isLiveContent &&
           info.videoDetails.liveBroadcastDetails.isLiveNow
         ) {
-          this.mchannel.send({
-            embeds: [
-              new Discord.MessageEmbed()
-                .setColor("RED")
-                .setDescription("Live content is not implemented yet!"),
-            ],
-          });
-          return;
+          return new Discord.MessageEmbed()
+            .setColor("RED")
+            .setDescription("Live content is not implemented yet!");
         }
 
         const track = new Track(
@@ -345,17 +316,13 @@ class MusicBot {
           ].url,
           info.videoDetails.lengthSeconds
         );
-        this.enqueue(track);
+        return this.enqueue(track);
       }
     } catch (e) {
-      this.mchannel.send({
-        embeds: [
-          new Discord.MessageEmbed()
-            .setColor("RED")
-            .setDescription("Couldn't find video!"),
-        ],
-      });
       console.error("no video found");
+      return new Discord.MessageEmbed()
+        .setColor("RED")
+        .setDescription("Couldn't find video!");
     }
   }
 
@@ -503,6 +470,7 @@ class MusicBot {
    * if it was a search command it gives you 4 options to choose from.
    * @param {String} searchString The title of the song to search for.
    * @param {Boolean} queueIt True if it should be autoqueued, false otherwise.
+   * @param {*} id The id of the user who started the search
    */
   async searchTrack(searchString, queueIt, id) {
     try {
@@ -534,8 +502,7 @@ class MusicBot {
               videos.items[i].bestThumbnail.url,
               toLengthSeconds(videos.items[i].duration)
             );
-            this.enqueue(track);
-            break;
+            return this.enqueue(track);
           }
         }
         // if it was a search it should give you options to choose from (now it is 4 options)
@@ -603,11 +570,8 @@ class MusicBot {
                   notLiveVideos[num].bestThumbnail.url,
                   toLengthSeconds(notLiveVideos[num].duration)
                 );
-                this.enqueue(track);
-                const playEmbed = new Discord.MessageEmbed()
-                  .setColor("GREEN")
-                  .setDescription(`You choose: ${num + 1}. ${track.title}`);
-                i.reply({ embeds: [playEmbed], ephemeral: true });
+                const playEmbed = this.enqueue(track);
+                i.reply({ embeds: [playEmbed] });
                 break;
             }
             collector.stop();
@@ -628,12 +592,11 @@ class MusicBot {
       }
     } catch (e) {
       console.error(e);
-      const errEmbed = new Discord.MessageEmbed()
+      return new Discord.MessageEmbed()
         .setColor("RED")
         .setDescription(
           "Couldn't find music, or there was an error looking it up."
         );
-      this.mchannel.send({ embeds: [errEmbed] });
     }
   }
 

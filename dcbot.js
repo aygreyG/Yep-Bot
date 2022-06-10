@@ -4,6 +4,7 @@ const blackjack = require("./blackjack");
 const coinflip = require("./commands/coinflip");
 const help = require("./commands/help");
 const minecraft = require("./commands/minecraft");
+const leave = require("./commands/leave");
 const registercommands = require("./commands/registercommands");
 const ping = require("./commands/ping");
 const { Users } = require("./dbObjects");
@@ -17,6 +18,8 @@ const {
 } = require("@discordjs/voice");
 const fs = require("fs");
 const leaderboard = require("./commands/leaderboard");
+const play = require("./commands/play");
+const search = require("./commands/search");
 const client = new Discord.Client({
   intents: [
     Discord.Intents.FLAGS.GUILDS,
@@ -29,7 +32,27 @@ const client = new Discord.Client({
 });
 client.commands = require("./utils/getCommands")();
 client.currency = new Discord.Collection();
-client.musicBots = new Discord.Collection();
+client.musicbots = new Discord.Collection();
+
+Reflect.defineProperty(client.musicbots, "getBot", {
+  value: function getBot(interaction) {
+    if (
+      !client.musicbots.has(interaction.guildId) &&
+      interaction.member.voice.channel &&
+      !interaction.member.user.bot
+    ) {
+      const musicBot = new MusicBot(
+        interaction.member.voice.channel,
+        interaction.channel
+      );
+      client.musicbots.set(interaction.guildId, musicBot);
+      console.log(
+        `New musicbot set to guild: ${interaction.guildId} ${interaction.guild.name}!`
+      );
+    }
+    return client.musicbots.get(interaction.guildId);
+  },
+});
 
 /* add metódus hozzáadása currencyhez */
 Reflect.defineProperty(client.currency, "add", {
@@ -205,74 +228,11 @@ client.on("messageCreate", async (message) => {
         break;
       case "play":
       case "p":
-        const url = args[0];
-
-        if (
-          !musicBot &&
-          message.member.voice.channel &&
-          message.member instanceof Discord.GuildMember
-        ) {
-          const channel = message.member.voice.channel;
-          musicBot = new MusicBot(channel, message.channel);
-          subcriptions.set(message.guildId, musicBot);
-          console.log(
-            `New musicbot set to guild: ${message.guildId} ${message.guild.name}!`
-          );
-        }
-
-        if (!subcriptions.has(message.guildId)) {
-          message.channel.send({
-            embeds: [
-              new Discord.MessageEmbed()
-                .setColor("RED")
-                .setDescription("Join a voice channel and try again!"),
-            ],
-          });
-          return;
-        }
-
-        if (
-          url &&
-          (url.includes("www.youtube.com") || url.includes("youtu.be"))
-        ) {
-          musicBot.playUrl(url);
-        } else if (args.length > 0) {
-          const searchString = args.join(" ");
-          musicBot.searchTrack(searchString, true);
-        }
-
+        play.execute(message, client, args.join(" "));
         break;
       case "s":
       case "search":
-        if (
-          !musicBot &&
-          message.member.voice.channel &&
-          message.member instanceof Discord.GuildMember
-        ) {
-          const channel = message.member.voice.channel;
-          musicBot = new MusicBot(channel, message.channel);
-          subcriptions.set(message.guildId, musicBot);
-          console.log(
-            `New musicbot set to guild: ${message.guildId} ${message.guild.name}!`
-          );
-        }
-
-        if (!subcriptions.has(message.guildId)) {
-          message.channel.send({
-            embeds: [
-              new Discord.MessageEmbed()
-                .setColor("RED")
-                .setDescription("Join a voice channel and try again!"),
-            ],
-          });
-          return;
-        }
-
-        if (musicBot) {
-          if (args.length > 0) {
-            musicBot.searchTrack(args.join(" "), false, message.author.id);
-          }
-        }
+        if (args.length > 0) search.execute(message, client, args.join(" "));
         break;
       case "n":
       case "next":
@@ -314,20 +274,7 @@ client.on("messageCreate", async (message) => {
         break;
       case "leave":
         // let subscription = subcriptions.get(message.guildId);
-        if (musicBot) {
-          musicBot.leave();
-          subcriptions.delete(message.guildId);
-
-          message.react("👍");
-        } else {
-          message.channel.send({
-            embeds: [
-              new Discord.MessageEmbed()
-                .setColor("RED")
-                .setDescription("Not in this server!"),
-            ],
-          });
-        }
+        leave.execute(message, client);
         break;
       case "repeat":
       case "loop":
