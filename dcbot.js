@@ -20,6 +20,9 @@ const fs = require("fs");
 const leaderboard = require("./commands/leaderboard");
 const play = require("./commands/play");
 const search = require("./commands/search");
+const playlist = require("./commands/playlist");
+const skip = require("./commands/skip");
+const stop = require("./commands/stop");
 const client = new Discord.Client({
   intents: [
     Discord.Intents.FLAGS.GUILDS,
@@ -188,43 +191,7 @@ client.on("messageCreate", async (message) => {
         }
         break;
       case "playlist":
-        if (
-          !musicBot &&
-          message.member.voice.channel &&
-          message.member instanceof Discord.GuildMember
-        ) {
-          const channel = message.member.voice.channel;
-          musicBot = new MusicBot(channel, message.channel);
-          subcriptions.set(message.guildId, musicBot);
-          console.log(
-            `New musicbot set to guild: ${message.guildId} ${message.guild.name}!`
-          );
-        }
-
-        if (!subcriptions.has(message.guildId)) {
-          message.channel.send({
-            embeds: [
-              new Discord.MessageEmbed()
-                .setColor("RED")
-                .setDescription("Join a voice channel and try again!"),
-            ],
-          });
-          return;
-        }
-
-        if (args.length > 0) {
-          if (args[0].includes("www.youtube.com") && args[0].includes("list")) {
-            musicBot.playlistSearch(args[0], message.author.id);
-          } else {
-            message.channel.send({
-              embeds: [
-                new Discord.MessageEmbed()
-                  .setColor("RED")
-                  .setDescription("It is not a playlist!"),
-              ],
-            });
-          }
-        }
+        playlist.execute(message, client, args.join(" "));
         break;
       case "play":
       case "p":
@@ -237,9 +204,7 @@ client.on("messageCreate", async (message) => {
       case "n":
       case "next":
       case "skip":
-        if (musicBot) {
-          musicBot.skipMusic();
-        }
+        skip.execute(message, client);
         break;
       case "pause":
         if (musicBot) {
@@ -252,7 +217,7 @@ client.on("messageCreate", async (message) => {
         }
         break;
       case "stop":
-        if (musicBot) musicBot.stop();
+        stop.execute(message, client);
         break;
       case "delete":
       case "del":
