@@ -1,14 +1,8 @@
 const Discord = require("discord.js");
 const { prefix, token } = require("./config.json");
 const blackjack = require("./blackjack");
-const coinflip = require("./commands/coinflip");
-const help = require("./commands/help");
-const minecraft = require("./commands/minecraft");
-const leave = require("./commands/leave");
-const registercommands = require("./commands/registercommands");
-const ping = require("./commands/ping");
 const { Users } = require("./dbObjects");
-const { MusicBot } = require("./music");
+const { MusicBot } = require("./models/MusicBot");
 const {
   AudioPlayerStatus,
   AudioResource,
@@ -17,12 +11,27 @@ const {
   VoiceConnectionStatus,
 } = require("@discordjs/voice");
 const fs = require("fs");
+const coinflip = require("./commands/coinflip");
+const help = require("./commands/help");
+const minecraft = require("./commands/minecraft");
+const leave = require("./commands/leave");
+const registercommands = require("./commands/registercommands");
+const ping = require("./commands/ping");
 const leaderboard = require("./commands/leaderboard");
 const play = require("./commands/play");
 const search = require("./commands/search");
 const playlist = require("./commands/playlist");
 const skip = require("./commands/skip");
 const stop = require("./commands/stop");
+const deleteSong = require("./commands/deleteSong");
+const pause = require("./commands/pause");
+const resume = require("./commands/resume");
+const queue = require("./commands/queue");
+const autoplay = require("./commands/autoplay");
+const id = require("./commands/id");
+const balance = require("./commands/balance");
+const repeat = require("./commands/repeat");
+const current = require("./commands/current");
 const client = new Discord.Client({
   intents: [
     Discord.Intents.FLAGS.GUILDS,
@@ -90,16 +99,13 @@ client.once("ready", async () => {
   const storedBalances = await Users.findAll();
   client.user.setActivity(`${prefix}help`, { type: "LISTENING" });
   storedBalances.forEach((b) => {
-    if (b.user_id != "" && b.user_id != "Ez egy id" && b.user_id > 0) {
+    if (b.user_id != "" && b.user_id > 0) {
       client.currency.set(b.user_id, b);
       client.users.fetch(b.user_id);
     }
   });
-  console.log("I'm ready!" + ` Logged in as '${client.user.tag}'`);
+  console.log(`I'm ready! Logged in as '${client.user.tag}'`);
 });
-
-// Key: guildId, Value: MusicBot
-const subcriptions = new Map();
 
 client.on("messageCreate", async (message) => {
   if (message.content.toLowerCase().includes("yep") && !message.author.bot)
@@ -110,14 +116,13 @@ client.on("messageCreate", async (message) => {
 
   if (message.guild) {
     client.user.setActivity(`${prefix}help`, { type: "LISTENING" });
-    let musicBot = subcriptions.get(message.guildId);
     switch (command) {
       case "registercommands":
         registercommands.execute(message);
         break;
       case "f":
       case "flip":
-        if (args.length > 0) coinflip.execute(message, client, args);
+        coinflip.execute(message, client, args);
         break;
       case "ping":
         ping.execute(message);
@@ -138,38 +143,10 @@ client.on("messageCreate", async (message) => {
         blackjack.start(message, client.currency);
         break;
       case "balance":
-        if (message.mentions.users.size) {
-          message.channel.send({
-            embeds: [
-              new Discord.MessageEmbed()
-                .setColor("DARK_ORANGE")
-                .setDescription(
-                  `${message.mentions.users.first()} has: ${await client.currency.getBalance(
-                    message.mentions.users.first().id
-                  )}`
-                ),
-            ],
-          });
-        } else {
-          message.channel.send({
-            embeds: [
-              new Discord.MessageEmbed()
-                .setColor("DARK_ORANGE")
-                .setDescription(
-                  `${
-                    message.author
-                  }, you have: ${await client.currency.getBalance(
-                    message.author.id
-                  )}`
-                ),
-            ],
-          });
-        }
+        balance.execute(message, client);
         break;
       case "id":
-        if (args.length > 0) {
-          message.channel.send({ content: message.mentions.users.first().id });
-        }
+        id.execute(message, client);
         break;
       case "add":
         if (message.author.id === "107398653542400000") {
@@ -207,47 +184,36 @@ client.on("messageCreate", async (message) => {
         skip.execute(message, client);
         break;
       case "pause":
-        if (musicBot) {
-          musicBot.pause();
-        }
+        pause.execute(message, client);
         break;
       case "resume":
-        if (musicBot) {
-          musicBot.resume();
-        }
+        resume.execute(message, client);
         break;
       case "stop":
         stop.execute(message, client);
         break;
       case "delete":
       case "del":
-        if (musicBot) {
-          if (parseInt(args[0])) {
-            musicBot.deleteFromQueue(args[0], true);
-          } else {
-            musicBot.deleteFromQueue(args.join(" "), false);
-          }
-        }
+        deleteSong.execute(message, client, args.join(" "));
         break;
       case "q":
       case "queue":
-        if (musicBot) musicBot.queuePrint();
+        queue.execute(message, client);
         break;
       case "ap":
       case "autoplay":
-        if (musicBot) musicBot.autoPlay();
+        autoplay.execute(message, client);
         break;
       case "leave":
-        // let subscription = subcriptions.get(message.guildId);
         leave.execute(message, client);
         break;
       case "repeat":
       case "loop":
-        if (musicBot) musicBot.repeatChange();
+        repeat.execute(message, client);
         break;
       case "c":
       case "current":
-        if (musicBot) musicBot.currentlyPlaying();
+        current.execute(message, client);
         break;
       case "minecraft":
       case "mc":
@@ -286,9 +252,7 @@ client.on("voiceStateUpdate", (oldState, newState) => {
   if (newState.channel == null) {
     if (oldState.channel.members.size == 1) {
       if (oldState.channel.members.first().id == client.user.id) {
-        const musicBot = subcriptions.get(oldState.guild.id);
-        musicBot.leave();
-        subcriptions.delete(oldState.guild.id);
+        leave.execute(oldState.channel, client);
       }
     }
   }

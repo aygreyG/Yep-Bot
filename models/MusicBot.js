@@ -18,10 +18,10 @@ const { exec } = require("youtube-dl-exec");
 const ytsr = require("ytsr");
 const fs = require("fs");
 const ytpl = require("ytpl");
-const { progressEmote } = require("./config.json");
-const { toDurationString, toLengthSeconds } = require("./utils/durationutil");
-const Track = require("./models/Track");
-const paginator = require("./utils/paginator");
+const { progressEmote } = require("../config.json");
+const { toDurationString, toLengthSeconds } = require("../utils/durationutil");
+const Track = require("./Track");
+const paginator = require("../utils/paginator");
 // let counter = 0;
 
 //the number of segments on the "currently playing song" embed progressbar, default is 18
@@ -622,15 +622,10 @@ class MusicBot {
   autoPlay() {
     // console.log(this.autoplay);
     this.autoplay = !this.autoplay;
-    this.mchannel.send({
-      embeds: [
-        new Discord.MessageEmbed()
-          .setColor("DARK_GREEN")
-          .setDescription(
-            this.autoplay ? "Autoplay is on!" : "Autoplay is off!"
-          ),
-      ],
-    });
+
+    return new Discord.MessageEmbed()
+      .setColor("DARK_GREEN")
+      .setDescription(this.autoplay ? "Autoplay is on!" : "Autoplay is off!");
   }
 
   /**
@@ -657,36 +652,36 @@ class MusicBot {
   }
 
   pause() {
-    if (this.audioPlayer.state.status === AudioPlayerStatus.Playing) {
-      this.mchannel.send({
-        embeds: [
-          new Discord.MessageEmbed()
-            .setColor("YELLOW")
-            .setThumbnail(this.audioPlayer.state.resource.metadata.thumb)
-            .addField(
-              "Paused:",
-              `[${this.audioPlayer.state.resource.metadata.title}](${this.audioPlayer.state.resource.metadata.url})`
-            ),
-        ],
-      });
-      this.audioPlayer.pause(true);
+    if (!(this.audioPlayer.state.status === AudioPlayerStatus.Playing)) {
+      return new Discord.MessageEmbed()
+        .setColor("RED")
+        .setDescription("There is no music playing!");
     }
+    let embed = new Discord.MessageEmbed()
+      .setColor("YELLOW")
+      .setThumbnail(this.audioPlayer.state.resource.metadata.thumb)
+      .addField(
+        "Paused:",
+        `[${this.audioPlayer.state.resource.metadata.title}](${this.audioPlayer.state.resource.metadata.url})`
+      );
+    this.audioPlayer.pause(true);
+    return embed;
   }
 
   resume() {
     this.audioPlayer.unpause();
     if (this.audioPlayer.state.status === AudioPlayerStatus.Playing) {
-      this.mchannel.send({
-        embeds: [
-          new Discord.MessageEmbed()
-            .setColor("DARK_NAVY")
-            .setThumbnail(this.audioPlayer.state.resource.metadata.thumb)
-            .addField(
-              "Resumed:",
-              `[${this.audioPlayer.state.resource.metadata.title}](${this.audioPlayer.state.resource.metadata.url})`
-            ),
-        ],
-      });
+      return new Discord.MessageEmbed()
+        .setColor("DARK_NAVY")
+        .setThumbnail(this.audioPlayer.state.resource.metadata.thumb)
+        .addField(
+          "Resumed:",
+          `[${this.audioPlayer.state.resource.metadata.title}](${this.audioPlayer.state.resource.metadata.url})`
+        );
+    } else {
+      return new Discord.MessageEmbed()
+        .setColor("RED")
+        .setDescription("Couldn't resume playback!");
     }
   }
 
@@ -756,25 +751,10 @@ class MusicBot {
    * Turns on and off the repeat function.
    */
   repeatChange() {
-    if (this.repeat) {
-      this.mchannel.send({
-        embeds: [
-          new Discord.MessageEmbed()
-            .setColor("YELLOW")
-            .setDescription("Repeat is now disabled!"),
-        ],
-      });
-      this.repeat = false;
-    } else {
-      this.mchannel.send({
-        embeds: [
-          new Discord.MessageEmbed()
-            .setColor("WHITE")
-            .setDescription("Repeat is now enabled!"),
-        ],
-      });
-      this.repeat = true;
-    }
+    this.repeat = !this.repeat;
+    return new Discord.MessageEmbed()
+      .setColor("YELLOW")
+      .setDescription(`Repeat is now ${this.repeat ? "enabled" : "disabled"}!`);
   }
 
   calcPlayerString(currentLength, allLength) {
@@ -792,37 +772,41 @@ class MusicBot {
 
   async currentlyPlaying() {
     if (
-      this.audioPlayer.state.status === AudioPlayerStatus.Paused ||
-      this.audioPlayer.state.status === AudioPlayerStatus.Playing
+      !(
+        this.audioPlayer.state.status === AudioPlayerStatus.Paused ||
+        this.audioPlayer.state.status === AudioPlayerStatus.Playing
+      )
     ) {
-      const currentLength =
-        this.audioPlayer.state.resource.playbackDuration / 1000;
-      const allLength = this.audioPlayer.state.resource.metadata.length;
-      const playerString = this.calcPlayerString(currentLength, allLength);
-      this.playerEmbed = await this.mchannel.send({
-        embeds: [
-          new Discord.MessageEmbed()
-            .setColor("WHITE")
-            .setThumbnail(this.audioPlayer.state.resource.metadata.thumb)
-            .addField(
-              "Currently Playing:",
-              `[${this.audioPlayer.state.resource.metadata.title}](${this.audioPlayer.state.resource.metadata.url})`
-            )
-            .addField(
-              "\u200b",
-              `${toDurationString(
-                currentLength,
-                toDurationString(allLength).split(":").length
-              )}/${toDurationString(allLength)}     ${playerString}`
-            ),
-        ],
-      });
-      if (!this.myinterval) {
-        this.myinterval = setInterval(() => {
-          // console.log("Updating stuff..." + counter++);
-          this.updatePlayerEmbed();
-        }, updateTime);
-      }
+      return;
+    }
+
+    const currentLength =
+      this.audioPlayer.state.resource.playbackDuration / 1000;
+    const allLength = this.audioPlayer.state.resource.metadata.length;
+    const playerString = this.calcPlayerString(currentLength, allLength);
+    this.playerEmbed = await this.mchannel.send({
+      embeds: [
+        new Discord.MessageEmbed()
+          .setColor("WHITE")
+          .setThumbnail(this.audioPlayer.state.resource.metadata.thumb)
+          .addField(
+            "Currently Playing:",
+            `[${this.audioPlayer.state.resource.metadata.title}](${this.audioPlayer.state.resource.metadata.url})`
+          )
+          .addField(
+            "\u200b",
+            `${toDurationString(
+              currentLength,
+              toDurationString(allLength).split(":").length
+            )}/${toDurationString(allLength)}     ${playerString}`
+          ),
+      ],
+    });
+    if (!this.myinterval) {
+      this.myinterval = setInterval(() => {
+        // console.log("Updating stuff..." + counter++);
+        this.updatePlayerEmbed();
+      }, updateTime);
     }
   }
 

@@ -54,7 +54,12 @@ module.exports = {
     let user;
     let bet;
     let choice;
-    if (args) {
+    if (!interaction.commandName) {
+      if (!args) {
+        error("You didn't give enough arguments!");
+        return;
+      }
+
       user = interaction.author;
       if (parseInt(args[0]) > 0) {
         bet = parseInt(args[0]);
