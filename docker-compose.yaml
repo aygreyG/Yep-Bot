@@ -1,6 +1,6 @@
 services: 
   yep-test: 
     environment: 
-      TOKEN: myToken
+      TOKEN: mytoken
     image: sc4n1a471/yep-test
 version: "3"
