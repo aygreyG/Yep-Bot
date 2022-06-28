@@ -18,7 +18,10 @@ const { exec } = require("youtube-dl-exec");
 const ytsr = require("ytsr");
 const fs = require("fs");
 const ytpl = require("ytpl");
-const { progressEmote } = require("./config.json");
+const { progressEmote } = require("../config.json");
+const { toDurationString, toLengthSeconds } = require("../utils/durationutil");
+const Track = require("./Track");
+const paginator = require("../utils/paginator");
 // let counter = 0;
 
 //the number of segments on the "currently playing song" embed progressbar, default is 18
@@ -27,42 +30,6 @@ const playerSegments = 18;
 const updateTime = 1250;
 //the maximum length a searched song can be, default is "03:15:00"
 const maxLength = "03:15:00";
-
-const toLengthSeconds = (stringduration) => {
-  if (stringduration) {
-    const lengtharray = stringduration.split(":");
-    if (lengtharray.length > 3) return -1;
-    let length = 0;
-    for (let i = 0; i < lengtharray.length; i++) {
-      length += parseInt(lengtharray[i]) * 60 ** (lengtharray.length - 1 - i);
-    }
-    return length;
-  }
-  return -1;
-};
-
-const toDurationString = (length, strlength = 0) => {
-  if (length === -1) return "-1";
-  const date = new Date(length * 1000).toUTCString().split(" ")[4];
-  if (parseInt(date.split(":")[0]) > 0 || strlength === 3) {
-    return date;
-  } else if (parseInt(date.split(":")[1]) > 0 || strlength === 2) {
-    return date.slice(3);
-  } else return date.slice(6);
-};
-
-/**
- * Class of the Track implementation.
- * It stores the url, title and thumbnail of the video.
- */
-class Track {
-  constructor(url, title, thumb, length = -1) {
-    this.url = url;
-    this.title = title;
-    this.thumb = thumb;
-    this.length = length;
-  }
-}
 
 /**
  * Class of the musicBot implementation.
@@ -236,26 +203,17 @@ class MusicBot {
     ) {
       this.queue.push(track);
       if (embed) {
-        this.mchannel.send({
-          embeds: [
-            new Discord.MessageEmbed()
-              .setColor("DARK_BUT_NOT_BLACK")
-              .setThumbnail(track.thumb)
-              .addField("Queued: ", `[${track.title}](${track.url})`),
-          ],
-        });
+        return new Discord.MessageEmbed()
+          .setColor("DARK_BUT_NOT_BLACK")
+          .setThumbnail(track.thumb)
+          .addField("Queued: ", `[${track.title}](${track.url})`);
       }
     } else {
       this.playTrack(track);
-
-      this.mchannel.send({
-        embeds: [
-          new Discord.MessageEmbed()
-            .setColor("DARK_VIVID_PINK")
-            .setThumbnail(track.thumb)
-            .addField("Now playing: ", `[${track.title}](${track.url})`),
-        ],
-      });
+      return new Discord.MessageEmbed()
+        .setColor("DARK_VIVID_PINK")
+        .setThumbnail(track.thumb)
+        .addField("Now playing: ", `[${track.title}](${track.url})`);
     }
   }
 
@@ -340,21 +298,15 @@ class MusicBot {
       const info = await getInfo(url);
 
       if (info) {
-        // console.log("eljut ide");
         // fs.writeFile("./info.json","Data\n" + JSON.stringify(info.videoDetails), "utf8",() => console.log("Written to info file!"));
 
         if (
           info.videoDetails.isLiveContent &&
           info.videoDetails.liveBroadcastDetails.isLiveNow
         ) {
-          this.mchannel.send({
-            embeds: [
-              new Discord.MessageEmbed()
-                .setColor("RED")
-                .setDescription("Live content is not implemented yet!"),
-            ],
-          });
-          return;
+          return new Discord.MessageEmbed()
+            .setColor("RED")
+            .setDescription("Live content is not implemented yet!");
         }
 
         const track = new Track(
@@ -365,17 +317,13 @@ class MusicBot {
           ].url,
           info.videoDetails.lengthSeconds
         );
-        this.enqueue(track);
+        return this.enqueue(track);
       }
     } catch (e) {
-      this.mchannel.send({
-        embeds: [
-          new Discord.MessageEmbed()
-            .setColor("RED")
-            .setDescription("Couldn't find video!"),
-        ],
-      });
       console.error("no video found");
+      return new Discord.MessageEmbed()
+        .setColor("RED")
+        .setDescription("Couldn't find video!");
     }
   }
 
@@ -391,32 +339,24 @@ class MusicBot {
       const embed = new Discord.MessageEmbed()
         .setColor("BLURPLE")
         .setThumbnail(playlist.bestThumbnail.url)
-        .setTitle("**Choose what you would like to do with this playlist:**")
+        .setTitle("**Would you like to queue this playlist?**")
         .setDescription(
           playlist.title + ", song count: " + playlist.estimatedItemCount
-        )
-        .addFields([
-          { name: "1", value: "Queue all songs" },
-          {
-            name: "2",
-            value: "Choose a song from the playlist (not implemented yet)",
-          },
-          { name: "X", value: "Cancel" },
-        ]);
+        );
 
       const row = new Discord.MessageActionRow().addComponents([
         new Discord.MessageButton()
           .setCustomId("1")
-          .setLabel("1")
-          .setStyle("PRIMARY"),
-        new Discord.MessageButton()
-          .setCustomId("2")
-          .setLabel("2")
-          .setStyle("PRIMARY")
-          .setDisabled(true),
+          .setLabel("Yes")
+          .setStyle("SUCCESS"),
+        // new Discord.MessageButton()
+        //   .setCustomId("2")
+        //   .setLabel("2")
+        //   .setStyle("PRIMARY")
+        //   .setDisabled(true),
         new Discord.MessageButton()
           .setCustomId("X")
-          .setLabel("X")
+          .setLabel("No")
           .setStyle("DANGER"),
       ]);
 
@@ -486,9 +426,9 @@ class MusicBot {
                 });
               }
               break;
-            case "2":
-              collector.stop("two");
-              break;
+            // case "2":
+            //   collector.stop("two");
+            //   break;
             default:
               break;
           }
@@ -506,12 +446,12 @@ class MusicBot {
           component.setDisabled(true);
         });
         msg.edit({ components: [row] });
-        if (reason === "two") {
-          //TODO: uj row es stb...
-          embed.spliceFields(0, 3);
-          embed.addField("Not yet implemented", "Sadge");
-          msg.edit({ embeds: [embed] });
-        }
+        // if (reason === "two") {
+        //   //TODO: uj row es stb...
+        //   embed.spliceFields(0, 3);
+        //   embed.addField("Not yet implemented", "Sadge");
+        //   msg.edit({ embeds: [embed] });
+        // }
       });
     } catch (e) {
       console.error(e);
@@ -523,6 +463,7 @@ class MusicBot {
    * if it was a search command it gives you 4 options to choose from.
    * @param {String} searchString The title of the song to search for.
    * @param {Boolean} queueIt True if it should be autoqueued, false otherwise.
+   * @param {*} id The id of the user who started the search
    */
   async searchTrack(searchString, queueIt, id) {
     try {
@@ -554,8 +495,7 @@ class MusicBot {
               videos.items[i].bestThumbnail.url,
               toLengthSeconds(videos.items[i].duration)
             );
-            this.enqueue(track);
-            break;
+            return this.enqueue(track);
           }
         }
         // if it was a search it should give you options to choose from (now it is 4 options)
@@ -623,11 +563,8 @@ class MusicBot {
                   notLiveVideos[num].bestThumbnail.url,
                   toLengthSeconds(notLiveVideos[num].duration)
                 );
-                this.enqueue(track);
-                const playEmbed = new Discord.MessageEmbed()
-                  .setColor("GREEN")
-                  .setDescription(`You choose: ${num + 1}. ${track.title}`);
-                i.reply({ embeds: [playEmbed], ephemeral: true });
+                const playEmbed = this.enqueue(track);
+                i.reply({ embeds: [playEmbed] });
                 break;
             }
             collector.stop();
@@ -648,12 +585,11 @@ class MusicBot {
       }
     } catch (e) {
       console.error(e);
-      const errEmbed = new Discord.MessageEmbed()
+      return new Discord.MessageEmbed()
         .setColor("RED")
         .setDescription(
           "Couldn't find music, or there was an error looking it up."
         );
-      this.mchannel.send({ embeds: [errEmbed] });
     }
   }
 
@@ -665,13 +601,9 @@ class MusicBot {
     this.repeat = false;
     this.queue = [];
     this.audioPlayer.stop(true);
-    this.mchannel.send({
-      embeds: [
-        new Discord.MessageEmbed()
-          .setColor("FUCHSIA")
-          .setDescription("Stopped and cleared queue!"),
-      ],
-    });
+    return new Discord.MessageEmbed()
+      .setColor("FUCHSIA")
+      .setDescription("Stopped and cleared queue!");
   }
 
   /**
@@ -690,15 +622,10 @@ class MusicBot {
   autoPlay() {
     // console.log(this.autoplay);
     this.autoplay = !this.autoplay;
-    this.mchannel.send({
-      embeds: [
-        new Discord.MessageEmbed()
-          .setColor("DARK_GREEN")
-          .setDescription(
-            this.autoplay ? "Autoplay is on!" : "Autoplay is off!"
-          ),
-      ],
-    });
+
+    return new Discord.MessageEmbed()
+      .setColor("DARK_GREEN")
+      .setDescription(this.autoplay ? "Autoplay is on!" : "Autoplay is off!");
   }
 
   /**
@@ -708,217 +635,89 @@ class MusicBot {
     this.skip = true;
     if (this.queue.length === 0 && !this.autoplay) {
       this.audioPlayer.stop(true);
-      this.mchannel.send({
-        embeds: [
-          new Discord.MessageEmbed()
-            .setColor("DARK_GOLD")
-            .setDescription("Stopped because there was nothing in the queue!"),
-        ],
-      });
+      return new Discord.MessageEmbed()
+        .setColor("DARK_GOLD")
+        .setDescription("Stopped because there was nothing in the queue!");
     } else {
+      const embed = new Discord.MessageEmbed()
+        .setColor("DARK_GOLD")
+        .addField(
+          "You skipped:",
+          `[${this.audioPlayer.state.resource.metadata.title}](${this.audioPlayer.state.resource.metadata.url})`
+        )
+        .setThumbnail(this.audioPlayer.state.resource.metadata.thumb);
       this.audioPlayer.stop(true);
+      return embed;
     }
   }
 
   pause() {
-    if (this.audioPlayer.state.status === AudioPlayerStatus.Playing) {
-      this.mchannel.send({
-        embeds: [
-          new Discord.MessageEmbed()
-            .setColor("YELLOW")
-            .setThumbnail(this.audioPlayer.state.resource.metadata.thumb)
-            .addField(
-              "Paused:",
-              `[${this.audioPlayer.state.resource.metadata.title}](${this.audioPlayer.state.resource.metadata.url})`
-            ),
-        ],
-      });
-      this.audioPlayer.pause(true);
+    if (!(this.audioPlayer.state.status === AudioPlayerStatus.Playing)) {
+      return new Discord.MessageEmbed()
+        .setColor("RED")
+        .setDescription("There is no music playing!");
     }
+    let embed = new Discord.MessageEmbed()
+      .setColor("YELLOW")
+      .setThumbnail(this.audioPlayer.state.resource.metadata.thumb)
+      .addField(
+        "Paused:",
+        `[${this.audioPlayer.state.resource.metadata.title}](${this.audioPlayer.state.resource.metadata.url})`
+      );
+    this.audioPlayer.pause(true);
+    return embed;
   }
 
   resume() {
     this.audioPlayer.unpause();
     if (this.audioPlayer.state.status === AudioPlayerStatus.Playing) {
-      this.mchannel.send({
-        embeds: [
-          new Discord.MessageEmbed()
-            .setColor("DARK_NAVY")
-            .setThumbnail(this.audioPlayer.state.resource.metadata.thumb)
-            .addField(
-              "Resumed:",
-              `[${this.audioPlayer.state.resource.metadata.title}](${this.audioPlayer.state.resource.metadata.url})`
-            ),
-        ],
-      });
+      return new Discord.MessageEmbed()
+        .setColor("DARK_NAVY")
+        .setThumbnail(this.audioPlayer.state.resource.metadata.thumb)
+        .addField(
+          "Resumed:",
+          `[${this.audioPlayer.state.resource.metadata.title}](${this.audioPlayer.state.resource.metadata.url})`
+        );
+    } else {
+      return new Discord.MessageEmbed()
+        .setColor("RED")
+        .setDescription("Couldn't resume playback!");
     }
   }
 
   /**
    * Sends an embed which contains the queue to the assigned message channel.
    */
-  async queuePrint() {
+  queuePrint() {
     if (this.queue.length === 0) {
-      const embed = new Discord.MessageEmbed()
+      return new Discord.MessageEmbed()
         .setColor("RED")
         .setDescription("The queue is empty!");
-      this.mchannel.send({ embeds: [embed] });
     } else {
-      const embed = new Discord.MessageEmbed()
-        .setColor("WHITE")
-        .setTitle("**The queue is:**");
-      const maxnum = 5;
-      if (this.queue.length > maxnum) {
-        let allpages = Math.ceil(this.queue.length / maxnum);
-        let currpage = 1;
-        embed.setFooter({ text: `Page: ${currpage}/${allpages}` });
+      const tracks = [];
+      this.queue.forEach((track) =>
+        tracks.push(`[${track.title}](${track.url})`)
+      );
 
-        const row = new Discord.MessageActionRow().addComponents([
-          new Discord.MessageButton()
-            .setCustomId("1")
-            .setLabel("PREVIOUS")
-            .setStyle("SUCCESS"),
-          new Discord.MessageButton()
-            .setCustomId("2")
-            .setLabel("NEXT")
-            .setStyle("SUCCESS"),
-          new Discord.MessageButton()
-            .setCustomId("X")
-            .setLabel("X")
-            .setStyle("DANGER"),
-        ]);
-
-        let index = 0;
-        for (const track of this.queue) {
-          if (index + 1 <= maxnum) {
-            embed.addField(
-              (index + 1).toString(),
-              `[${track.title}](${track.url})`
-            );
-            index++;
-          } else break;
-        }
-
-        const msg = await this.mchannel.send({
-          embeds: [embed],
-          components: [row],
-        });
-
-        const collector = msg.createMessageComponentCollector({
-          componentType: "BUTTON",
-          time: 90000,
-        });
-
-        collector.on("collect", (i) => {
-          switch (i.customId) {
-            case "1":
-              if (currpage == 1) {
-                const nolessEmbed = new Discord.MessageEmbed()
-                  .setColor("DARK_RED")
-                  .setDescription("There is no previous page!");
-                i.reply({
-                  embeds: [nolessEmbed],
-                  ephemeral: true,
-                });
-              } else {
-                allpages = Math.ceil(this.queue.length / maxnum);
-                currpage--;
-                embed.setFields([]);
-                embed.setFooter({ text: `Page: ${currpage}/${allpages}` });
-                index = 0;
-                for (const track of this.queue) {
-                  if (
-                    index + 1 - (currpage - 1) * maxnum <= maxnum &&
-                    index + 1 - (currpage - 1) * maxnum > 0
-                  ) {
-                    embed.addField(
-                      (index + 1).toString(),
-                      `[${track.title}](${track.url})`
-                    );
-                  }
-                  index++;
-                }
-                msg.edit({ embeds: [embed] });
-                i.deferReply();
-                i.deleteReply();
-              }
-              break;
-            case "2":
-              if (currpage == allpages) {
-                const nopagesEmbed = new Discord.MessageEmbed()
-                  .setColor("DARK_RED")
-                  .setDescription("There are no more pages!");
-                i.reply({
-                  embeds: [nopagesEmbed],
-                  ephemeral: true,
-                });
-              } else {
-                allpages = Math.ceil(this.queue.length / maxnum);
-                currpage++;
-                // embed.spliceFields(0, this.queue.length - currpage * maxnum);
-                embed.setFields([]);
-                embed.setFooter({ text: `Page: ${currpage}/${allpages}` });
-                index = 0;
-                for (const track of this.queue) {
-                  if (
-                    index + 1 - (currpage - 1) * maxnum <= maxnum &&
-                    index + 1 - (currpage - 1) * maxnum > 0
-                  ) {
-                    embed.addField(
-                      (index + 1).toString(),
-                      `[${track.title}](${track.url})`
-                    );
-                  }
-                  index++;
-                }
-                msg.edit({ embeds: [embed] });
-                i.deferReply();
-                i.deleteReply();
-              }
-              break;
-            case "X":
-              i.deferReply();
-              i.deleteReply();
-              collector.stop();
-              break;
-            default:
-              break;
-          }
-        });
-
-        collector.on("end", (collected, reason) => {
-          row.components.forEach((component) => {
-            component.setDisabled(true);
-          });
-          msg.edit({ components: [row] });
-        });
-      } else {
-        this.queue.forEach((track, index) => {
-          embed.addField(
-            (index + 1).toString(),
-            `[${track.title}](${track.url})`
-          );
-        });
-        this.mchannel.send({ embeds: [embed] });
-      }
+      paginator(this.mchannel, "**The queue is:**", tracks);
+      return false;
     }
   }
 
   /**
    *
-   * @param {string} mystring
-   * @param {Boolean} isIndex
+   * @param {string} delstring
    */
-  deleteFromQueue(mystring, isIndex = false) {
+  deleteFromQueue(delstring) {
     let deleted = Track;
-    if (isIndex) {
-      if (parseInt(mystring) <= this.queue.length && parseInt(mystring) > 0) {
-        deleted = this.queue[parseInt(mystring) - 1];
-        this.queue.splice(parseInt(mystring) - 1, 1);
+    if (parseInt(delstring)) {
+      if (parseInt(delstring) <= this.queue.length && parseInt(delstring) > 0) {
+        deleted = this.queue[parseInt(delstring) - 1];
+        this.queue.splice(parseInt(delstring) - 1, 1);
       }
     } else {
       let index = -1;
-      const mystring1 = mystring.toLowerCase();
+      const mystring1 = delstring.toLowerCase();
       let tracktitle = "";
       this.queue.forEach((track) => {
         tracktitle = track.title.toLowerCase();
@@ -934,17 +733,17 @@ class MusicBot {
       }
     }
     if (deleted.title != undefined || deleted.url != undefined) {
-      this.mchannel.send({
-        embeds: [
-          new Discord.MessageEmbed()
-            .setColor("GREEN")
-            .addField(
-              "**Succesfully deleted from queue:**",
-              `[${deleted.title}](${deleted.url})`
-            )
-            .setThumbnail(deleted.thumb),
-        ],
-      });
+      return new Discord.MessageEmbed()
+        .setColor("GREEN")
+        .addField(
+          "**Succesfully deleted from queue:**",
+          `[${deleted.title}](${deleted.url})`
+        )
+        .setThumbnail(deleted.thumb);
+    } else {
+      return new Discord.MessageEmbed()
+        .setColor("RED")
+        .setDescription("Couldn't find that song.");
     }
   }
 
@@ -952,25 +751,10 @@ class MusicBot {
    * Turns on and off the repeat function.
    */
   repeatChange() {
-    if (this.repeat) {
-      this.mchannel.send({
-        embeds: [
-          new Discord.MessageEmbed()
-            .setColor("YELLOW")
-            .setDescription("Repeat is now disabled!"),
-        ],
-      });
-      this.repeat = false;
-    } else {
-      this.mchannel.send({
-        embeds: [
-          new Discord.MessageEmbed()
-            .setColor("WHITE")
-            .setDescription("Repeat is now enabled!"),
-        ],
-      });
-      this.repeat = true;
-    }
+    this.repeat = !this.repeat;
+    return new Discord.MessageEmbed()
+      .setColor("YELLOW")
+      .setDescription(`Repeat is now ${this.repeat ? "enabled" : "disabled"}!`);
   }
 
   calcPlayerString(currentLength, allLength) {
@@ -988,37 +772,41 @@ class MusicBot {
 
   async currentlyPlaying() {
     if (
-      this.audioPlayer.state.status === AudioPlayerStatus.Paused ||
-      this.audioPlayer.state.status === AudioPlayerStatus.Playing
+      !(
+        this.audioPlayer.state.status === AudioPlayerStatus.Paused ||
+        this.audioPlayer.state.status === AudioPlayerStatus.Playing
+      )
     ) {
-      const currentLength =
-        this.audioPlayer.state.resource.playbackDuration / 1000;
-      const allLength = this.audioPlayer.state.resource.metadata.length;
-      const playerString = this.calcPlayerString(currentLength, allLength);
-      this.playerEmbed = await this.mchannel.send({
-        embeds: [
-          new Discord.MessageEmbed()
-            .setColor("WHITE")
-            .setThumbnail(this.audioPlayer.state.resource.metadata.thumb)
-            .addField(
-              "Currently Playing:",
-              `[${this.audioPlayer.state.resource.metadata.title}](${this.audioPlayer.state.resource.metadata.url})`
-            )
-            .addField(
-              "\u200b",
-              `${toDurationString(
-                currentLength,
-                toDurationString(allLength).split(":").length
-              )}/${toDurationString(allLength)}     ${playerString}`
-            ),
-        ],
-      });
-      if (!this.myinterval) {
-        this.myinterval = setInterval(() => {
-          // console.log("Updating stuff..." + counter++);
-          this.updatePlayerEmbed();
-        }, updateTime);
-      }
+      return;
+    }
+
+    const currentLength =
+      this.audioPlayer.state.resource.playbackDuration / 1000;
+    const allLength = this.audioPlayer.state.resource.metadata.length;
+    const playerString = this.calcPlayerString(currentLength, allLength);
+    this.playerEmbed = await this.mchannel.send({
+      embeds: [
+        new Discord.MessageEmbed()
+          .setColor("WHITE")
+          .setThumbnail(this.audioPlayer.state.resource.metadata.thumb)
+          .addField(
+            "Currently Playing:",
+            `[${this.audioPlayer.state.resource.metadata.title}](${this.audioPlayer.state.resource.metadata.url})`
+          )
+          .addField(
+            "\u200b",
+            `${toDurationString(
+              currentLength,
+              toDurationString(allLength).split(":").length
+            )}/${toDurationString(allLength)}     ${playerString}`
+          ),
+      ],
+    });
+    if (!this.myinterval) {
+      this.myinterval = setInterval(() => {
+        // console.log("Updating stuff..." + counter++);
+        this.updatePlayerEmbed();
+      }, updateTime);
     }
   }
 

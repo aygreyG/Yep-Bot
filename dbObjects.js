@@ -1,4 +1,4 @@
-const Sequelize = require("sequelize");
+const { Sequelize } = require("sequelize");
 
 const sequelize = new Sequelize("database", "username", "password", {
   host: "localhost",
@@ -7,6 +7,7 @@ const sequelize = new Sequelize("database", "username", "password", {
   storage: "database.sqlite",
 });
 
-const Users = require("./Users")(sequelize, Sequelize.DataTypes);
+const Users = require("./models/User")(sequelize, Sequelize.DataTypes);
+const Coins = require("./models/Coins")(sequelize, Sequelize.DataTypes);
 
-module.exports = { Users };
+module.exports = { Users, Coins };

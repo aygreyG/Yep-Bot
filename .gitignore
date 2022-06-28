@@ -10,9 +10,9 @@ database.sqlite
 package.old.json
 subs.js
 subs.ts
-track.js
 track.ts
 info.json
 playlist.json
 tmp.png
 coins.json
+gencmd.js
