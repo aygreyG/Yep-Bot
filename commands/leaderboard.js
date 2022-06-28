@@ -20,7 +20,7 @@ module.exports = {
       .sort((a, b) => b.balance - a.balance)
       .map((user) => {
         items.push(
-          `${client.users.cache.get(user.user_id).username}: ${user.balance}`
+          `**${client.users.cache.get(user.user_id).username}:** \`${user.balance}\``
         );
       });
 
@@ -38,7 +38,7 @@ module.exports = {
         10,
         undefined,
         "#dbaa23",
-        true
+        false
       );
     } else
       interaction.reply({

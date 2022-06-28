@@ -1,6 +1,6 @@
 const mcutil = require("minecraft-server-util");
 let { minecraftIp, minecraftPort } = require("../config.json");
-const { MessageEmbed, Message, CommandInteraction } = require("discord.js");
+const { MessageEmbed } = require("discord.js");
 const { SlashCommandBuilder } = require("@discordjs/builders");
 
 module.exports = {
@@ -12,7 +12,7 @@ module.exports = {
     .addStringOption((option) =>
       option.setName("ip").setDescription("Minecraft server ip.")
     ),
-  async execute(interaction, mcIp = minecraftIp) {
+  async execute(interaction, client, mcIp = minecraftIp) {
     if (interaction.commandName) {
       const ip = interaction.options.getString("ip");
       if (ip) {
@@ -49,7 +49,7 @@ module.exports = {
       }
     };
 
-    if (mcIp !== "your-ip(optional)") {
+    if (mcIp !== "your-ip(optional)" && mcIp != "") {
       if (!Number(minecraftPort)) {
         minecraftPort = 25565;
       }

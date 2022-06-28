@@ -17,6 +17,16 @@ module.exports = {
     }
 
     if (musicBot) {
+      if (!arg) {
+        interaction.reply({
+          embeds: [
+            new MessageEmbed()
+              .setColor("RED")
+              .setDescription("Search string is mandatory!"),
+          ],
+        });
+        return;
+      }
       musicBot.searchTrack(arg, false, interaction.member.id);
       if (interaction.commandName) {
         interaction.deferReply();

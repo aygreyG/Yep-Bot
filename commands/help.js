@@ -1,5 +1,4 @@
 const { MessageEmbed, TextChannel } = require("discord.js");
-const { commands } = require("../constants/commandhelp");
 const paginator = require("../utils/paginator");
 const embedcolor = "#ADE9F2";
 const { SlashCommandBuilder } = require("@discordjs/builders");
@@ -23,7 +22,7 @@ module.exports = {
       arg = interaction.options.getString("command");
     }
 
-    if (arg == undefined || arg == null) {
+    if (arg == undefined || arg == null || arg == "") {
       const fieldnames = [];
       const items = [];
 
