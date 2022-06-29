@@ -1,6 +1,6 @@
 const { Cards } = require("./cards.json");
 const Discord = require("discord.js");
-const { prefix } = require("./config.json");
+const { prefix } = require("./pv/config.json");
 
 /* 312db 6 decknél
 2 3 4 5 6 7 8 9 10 J Q K (10) A (1 v 11)

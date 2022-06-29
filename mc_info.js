@@ -1,5 +1,5 @@
 const mcutil = require("minecraft-server-util");
-let { minecraftIp, minecraftPort } = require("./config.json");
+let { minecraftIp, minecraftPort } = require("./pv/config.json");
 
 module.exports = {
   mcStatusCheck: async () => {

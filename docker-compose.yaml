@@ -1,6 +1,10 @@
+volumes:
+  yep-test:
 services: 
   yep-test: 
     environment: 
       TOKEN: mytoken
     image: sc4n1a471/yep-test
+    volumes:
+      - yep-test:/app/pv
 version: "3"

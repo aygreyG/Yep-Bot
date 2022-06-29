@@ -1,5 +1,5 @@
 const Discord = require("discord.js");
-const { prefix, token } = require("./config.json");
+const { prefix, token } = require("./pv/config.json");
 const blackjack = require("./blackjack");
 const coinflip = require("./coinflip");
 const { Users } = require("./dbObjects");

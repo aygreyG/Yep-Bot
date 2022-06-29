@@ -18,7 +18,7 @@ const { exec } = require("youtube-dl-exec");
 const ytsr = require("ytsr");
 const fs = require("fs");
 const ytpl = require("ytpl");
-const { progressEmote } = require("./config.json");
+const { progressEmote } = require("./pv/config.json");
 // let counter = 0;
 
 //the number of segments on the "currently playing song" embed progressbar, default is 18
