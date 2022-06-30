@@ -1,5 +1,6 @@
 const mcutil = require("minecraft-server-util");
-let { minecraftIp, minecraftPort } = require("../config.json");
+let minecraftIp = process.env.MCIP || require("../config.json").MCIP;
+let minecraftPort = process.env.MCPORT || require("../config.json").MCPORT;
 const { MessageEmbed } = require("discord.js");
 const { SlashCommandBuilder } = require("@discordjs/builders");
 

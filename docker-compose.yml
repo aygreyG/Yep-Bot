@@ -1,0 +1,15 @@
+version: '3'
+services: 
+  yep-bot:
+    build: .
+    environment: 
+      TOKEN: token
+      CLIENTID: clientid
+      PREFIX: "?"
+      MCIP: ip
+      MCPORT: port
+      PROGRESSBAR_EMOTE: 🔘
+    volumes:
+      - db-data:/app/data
+volumes:
+  db-data: local

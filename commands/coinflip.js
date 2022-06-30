@@ -1,6 +1,6 @@
 const Discord = require("discord.js");
 const { SlashCommandBuilder } = require("@discordjs/builders");
-const { Coins } = require("../dbObjects");
+const { Coins } = require("../database/dbObjects");
 
 // -flip heads/tails <bet>
 // -flip <bet> heads/tails
