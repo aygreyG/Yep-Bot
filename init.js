@@ -21,7 +21,6 @@ try {
       () => {
         console.log(
           `Config.json created successfully.
-          If it is not a docker:
           PLEASE UPDATE CONFIG.JSON BEFORE STARTING THE BOT!`
         );
       }

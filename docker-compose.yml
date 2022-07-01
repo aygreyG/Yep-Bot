@@ -1,15 +1,24 @@
 version: '3'
-services: 
+services:
   yep-bot:
-    build: .
-    environment: 
+    image: aygreyg/yep-bot:1.0
+    environment:
+
+      ###########################################################
+      #                       Must haves                        #
+      ###########################################################
       TOKEN: token
       CLIENTID: clientid
       PREFIX: "?"
-      MCIP: ip
-      MCPORT: port
-      PROGRESSBAR_EMOTE: 🔘
+
+      ###########################################################
+      #   Optional, uncomment and change them in order to use   #
+      ###########################################################
+      # MCIP: ip
+      # MCPORT: port
+      # PROGRESSBAR_EMOTE: emote
+
     volumes:
       - db-data:/app/data
 volumes:
-  db-data: local
+  db-data:

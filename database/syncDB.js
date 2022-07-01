@@ -5,7 +5,7 @@ module.exports = (force) => {
     host: "localhost",
     dialect: "sqlite",
     logging: false,
-    storage: "data/database.sqlite",
+    storage: "../data/database.sqlite",
   });
 
   require("./schemas/User")(sequelize, Sequelize.DataTypes);
