@@ -55,7 +55,8 @@ module.exports = {
     let bet;
     let choice;
     if (!interaction.commandName) {
-      if (!args) {
+      args = args.split(" ");
+      if (args.length < 2) {
         error("You didn't give enough arguments!");
         return;
       }

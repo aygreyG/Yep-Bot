@@ -1,11 +1,12 @@
 const { Sequelize } = require("sequelize");
+const path = require("path");
 
 module.exports = (force) => {
   const sequelize = new Sequelize("database", "username", "password", {
     host: "localhost",
     dialect: "sqlite",
     logging: false,
-    storage: "../data/database.sqlite",
+    storage: `${path.dirname(process.argv[1])}/data/database.sqlite`,
   });
 
   require("./schemas/User")(sequelize, Sequelize.DataTypes);
