@@ -1,8 +1,8 @@
 const { REST } = require("@discordjs/rest");
 const { Routes } = require("discord-api-types/v9");
 const { SlashCommandBuilder } = require("@discordjs/builders");
-const { clientId, token } = require("../config.json");
-const { readdirSync } = require("fs");
+const clientId = process.env.CLIENTID || require("../config.json").CLIENTID;
+const token = process.env.TOKEN || require("../config.json").TOKEN;
 const { MessageEmbed } = require("discord.js");
 
 module.exports = {

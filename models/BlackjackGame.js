@@ -1,7 +1,7 @@
 const { Cards } = require("../constants/cards.json");
 const { MessageEmbed, MessageActionRow, MessageButton } = require("discord.js");
 const Player = require("./BlackjackPlayer");
-const { prefix } = require("../config.json");
+const prefix = process.env.PREFIX || require("../config.json").PREFIX;
 const BetCollector = require("../utils/BetCollector");
 
 // all of the cards

@@ -1,6 +1,6 @@
 const Discord = require("discord.js");
 const { SlashCommandBuilder } = require("@discordjs/builders");
-const { Coins } = require("../dbObjects");
+const { Coins } = require("../database/dbObjects");
 
 // -flip heads/tails <bet>
 // -flip <bet> heads/tails
@@ -55,7 +55,8 @@ module.exports = {
     let bet;
     let choice;
     if (!interaction.commandName) {
-      if (!args) {
+      args = args.split(" ");
+      if (args.length < 2) {
         error("You didn't give enough arguments!");
         return;
       }

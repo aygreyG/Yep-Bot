@@ -1,6 +1,7 @@
 const Discord = require("discord.js");
-const { prefix, token } = require("./config.json");
-const { Users } = require("./dbObjects");
+const prefix = process.env.PREFIX || require("./config.json").PREFIX;
+const token = process.env.TOKEN || require("./config.json").TOKEN;
+const { Users } = require("./database/dbObjects");
 const { MusicBot } = require("./models/MusicBot");
 const leave = require("./commands/leave");
 const client = new Discord.Client({

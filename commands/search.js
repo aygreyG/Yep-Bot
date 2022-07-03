@@ -8,7 +8,10 @@ module.exports = {
       "❔ Searches youtube and gives you 4 options to choose from."
     )
     .addStringOption((option) =>
-      option.setName("song").setDescription("The song name to search for.")
+      option
+        .setName("song")
+        .setDescription("The song name to search for.")
+        .setRequired(true)
     ),
   execute(interaction, client, arg = undefined) {
     const musicBot = client.musicbots.getBot(interaction);
