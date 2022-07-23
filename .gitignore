@@ -2,7 +2,6 @@ node_modules
 .eslintrc.json
 chat
 hello.js
-package-lock.json
 /config*
 nodemon.json
 database.sqlite.old
